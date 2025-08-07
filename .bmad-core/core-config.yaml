@@ -5,6 +5,8 @@ prd:
   prdSharded: true
   prdShardedLocation: docs/prd
   epicFilePattern: epic-{n}*.md
+  # Dual-track approach: 1A = Ultra-minimal validation, 1B = Enterprise
+  currentTrack: 1A  # Currently executing validation track
 architecture:
   architectureFile: docs/architecture.md
   architectureVersion: v4
