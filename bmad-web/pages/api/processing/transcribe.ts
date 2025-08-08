@@ -3,16 +3,16 @@ import { TranscriptionService } from '@/lib/services/transcription.service';
 import { supabase } from '@/lib/supabase';
 
 /**
- * Story 1A.2: AI Processing Pipeline - Transcription Endpoint
+ * Story 1A.2.1: Enhanced AI Processing Pipeline - Transcription Endpoint
  * SiteProof - Construction Evidence Machine
  * 
- * Handles voice note transcription using OpenAI Whisper API
+ * Handles voice note transcription with business risk routing and critical error detection
  * Structured for easy migration to Django: /api/processing/transcribe/
  * 
  * Future Django equivalent:
  * class TranscriptionView(APIView):
  *     def post(self, request):
- *         # Process voice note transcription
+ *         # Process voice note transcription with business risk assessment
  */
 
 export default async function handler(
@@ -60,21 +60,46 @@ export default async function handler(
       submissionId: submission_id
     });
     
-    // Return Django-compatible response
+    // Story 1A.2.1: Enhanced response with business risk routing
     if (result.status === 'failed') {
       return res.status(500).json({
         detail: result.error || 'Transcription failed',
-        status: 'failed'
+        status: 'failed',
+        routing_decision: result.routing_decision || 'MANUAL_REVIEW',
+        critical_errors: result.critical_errors || [],
+        hallucination_detected: result.hallucination_detected || false
       });
     }
     
-    return res.status(200).json({
+    // Determine HTTP status based on routing decision
+    let httpStatus = 200;
+    if (result.routing_decision === 'URGENT_REVIEW') {
+      httpStatus = 202; // Accepted but requires urgent review
+    } else if (result.routing_decision === 'MANUAL_REVIEW') {
+      httpStatus = 202; // Accepted but requires manual review
+    }
+    
+    return res.status(httpStatus).json({
       transcription: result.transcription,
       confidence_score: result.confidence_score,
       processing_time: result.processing_time,
       word_count: result.word_count,
       duration: result.duration,
-      status: 'completed'
+      status: 'completed',
+      // Story 1A.2.1: Enhanced response fields
+      routing_decision: result.routing_decision,
+      business_risk: result.business_risk ? {
+        decision: result.business_risk.decision,
+        risk_score: result.business_risk.riskScore,
+        reasoning: result.business_risk.reasoning,
+        estimated_value: result.business_risk.estimatedValue,
+        critical_patterns: result.business_risk.criticalPatterns,
+        risk_factors: result.business_risk.riskFactors
+      } : undefined,
+      audio_quality: result.audio_quality,
+      critical_errors: result.critical_errors || [],
+      hallucination_detected: result.hallucination_detected || false,
+      requires_review: result.routing_decision !== 'AUTO_APPROVE'
     });
     
   } catch (error: any) {

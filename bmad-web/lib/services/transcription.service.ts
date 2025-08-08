@@ -1,8 +1,8 @@
 /**
- * Story 1A.2: Transcription Service
+ * Story 1A.2.1: Enhanced Transcription Service with Business Risk Routing
  * SiteProof - Construction Evidence Machine
  * 
- * Business logic for voice note transcription
+ * Implements audio normalization, business risk routing, and hallucination guards
  * Designed to be easily portable to Django
  * 
  * Future Django equivalent: apps/processing/services.py
@@ -12,6 +12,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import openai, { WHISPER_CONFIG, AI_ERROR_MESSAGES } from '@/lib/openai';
 import { File as FormDataFile } from 'formdata-node';
 import { fixTranscription, calculateConfidence as calculateFixerConfidence } from './transcription-fixer';
+import { AudioNormalizerService, AudioNormalizationResult } from './audio-normalizer.service';
+import { BusinessRiskRouterService, BusinessRiskAssessment, RoutingDecision } from './business-risk-router.service';
 
 export interface TranscriptionRequest {
   fileUrl: string;
@@ -27,18 +29,37 @@ export interface TranscriptionResponse {
   error?: string;
   word_count?: number;
   duration?: number;
+  // Story 1A.2.1: Enhanced response with business risk assessment
+  business_risk?: BusinessRiskAssessment;
+  routing_decision?: RoutingDecision;
+  audio_quality?: {
+    normalized: boolean;
+    quality_score: number;
+    original_size: number;
+    normalized_size: number;
+  };
+  critical_errors?: string[];
+  hallucination_detected?: boolean;
 }
 
 export class TranscriptionService {
+  private audioNormalizer: AudioNormalizerService;
+  private businessRiskRouter: BusinessRiskRouterService;
+  
+  constructor() {
+    this.audioNormalizer = new AudioNormalizerService();
+    this.businessRiskRouter = new BusinessRiskRouterService();
+  }
+  
   /**
-   * Process voice note through OpenAI Whisper API
-   * Implements Story 1A.2 requirements
+   * Story 1A.2.1: Enhanced voice note processing with business risk routing
+   * Implements audio normalization, critical error detection, and hallucination guards
    */
   async processVoiceNote(request: TranscriptionRequest): Promise<TranscriptionResponse> {
     const startTime = Date.now();
     
     try {
-      console.log('🔍 PROCESSING START:', { 
+      console.log('🔍 PROCESSING START (Story 1A.2.1):', { 
         submissionId: request.submissionId, 
         fileUrl: request.fileUrl,
         userId: request.userId 
@@ -53,20 +74,34 @@ export class TranscriptionService {
         url: request.fileUrl 
       });
       
-      // 2. Send to OpenAI Whisper API (or new model)
-      console.log('🎤 Calling OpenAI transcription API...');
-      const whisperResponse = await this.callWhisperAPI(audioFile, request.fileUrl);
+      // 2. Story 1A.2.1: Normalize audio for consistent processing
+      console.log('🎵 Normalizing audio...');
+      const normalizationResult = await this.audioNormalizer.normalizeAudio(audioFile, request.fileUrl);
+      console.log('🎵 Audio normalization complete:', {
+        originalSize: normalizationResult.originalSize,
+        normalizedSize: normalizationResult.normalizedSize,
+        processingTime: normalizationResult.processingTime,
+        format: normalizationResult.format
+      });
+      
+      // 3. Analyze audio quality for routing decisions
+      const audioQuality = await this.audioNormalizer.analyzeAudioQuality(audioFile);
+      console.log('🎯 Audio quality analysis:', audioQuality);
+      
+      // 4. Send normalized audio to OpenAI Whisper API
+      console.log('🎤 Calling OpenAI transcription API with normalized audio...');
+      const whisperResponse = await this.callWhisperAPI(normalizationResult.normalizedBlob, request.fileUrl);
       console.log('🎤 OpenAI response received:', { 
         hasText: !!whisperResponse.text,
         textLength: whisperResponse.text?.length || 0,
         firstChars: whisperResponse.text?.substring(0, 100) || 'NO TEXT'
       });
       
-      // 3. Get raw transcription
+      // 5. Get raw transcription
       const rawTranscription = whisperResponse.text || '';
       const initialConfidence = this.calculateConfidence(whisperResponse);
       
-      // 4. Apply Irish construction fixes
+      // 6. Story 1A.2.1: Apply enhanced Irish construction fixes with critical error detection
       console.log('🔧 Raw transcription before fixes:', {
         text: rawTranscription.substring(0, 200) + '...',
         confidence: initialConfidence
@@ -74,7 +109,9 @@ export class TranscriptionService {
       
       const fixResult = await fixTranscription(rawTranscription, {
         useGPT4: initialConfidence < 85, // Use GPT-4 for low confidence
-        initialConfidence
+        initialConfidence,
+        enableHallucinationGuards: true, // Story 1A.2.1: Enable hallucination detection
+        maxTokenExpansion: 15 // Reject if >15% token expansion
       });
       
       console.log('🔧 After fixes applied:', {
@@ -82,13 +119,33 @@ export class TranscriptionService {
         fixedLength: fixResult.fixed.length,
         changes: fixResult.changes,
         confidence: fixResult.confidence,
+        criticalErrors: fixResult.criticalErrors,
+        hallucinationDetected: fixResult.hallucinationDetected,
+        requiresManualReview: fixResult.requiresManualReview,
         fixedText: fixResult.fixed.substring(0, 200) + '...'
       });
       
-      // 5. Use the fixed transcription
+      // 7. Story 1A.2.1: Business risk assessment and routing
+      const businessRiskAssessment = this.businessRiskRouter.assessBusinessRisk({
+        transcription: fixResult.fixed,
+        audioQuality: audioQuality.quality,
+        audioScore: audioQuality.score,
+        duration: audioQuality.duration,
+        fileSize: audioFile.size,
+        userId: request.userId
+      });
+      
+      console.log('🎯 Business risk assessment:', {
+        decision: businessRiskAssessment.decision,
+        riskScore: businessRiskAssessment.riskScore,
+        criticalPatterns: businessRiskAssessment.criticalPatterns,
+        estimatedValue: businessRiskAssessment.estimatedValue
+      });
+      
+      // 8. Use the fixed transcription
       const transcription = fixResult.fixed;
       const confidence = fixResult.confidence;
-      const duration = whisperResponse.duration || 0;
+      const duration = whisperResponse.duration || audioQuality.duration || 0;
       const wordCount = transcription.split(/\s+/).filter(word => word.length > 0).length;
       
       // Log improvements for monitoring
@@ -96,7 +153,12 @@ export class TranscriptionService {
         console.log('Transcription fixes applied:', fixResult.changes);
       }
       
-      // 6. Store in database
+      // Log business risk routing
+      if (businessRiskAssessment.decision !== 'AUTO_APPROVE') {
+        console.log('🚨 Manual review required:', businessRiskAssessment.reasoning);
+      }
+      
+      // 9. Store in database with enhanced metadata
       await this.saveTranscription(
         request.submissionId,
         transcription,
@@ -105,11 +167,17 @@ export class TranscriptionService {
           duration, 
           wordCount,
           originalTranscription: rawTranscription,
-          fixesApplied: fixResult.changes
+          fixesApplied: fixResult.changes,
+          // Story 1A.2.1: Enhanced metadata
+          criticalErrors: fixResult.criticalErrors,
+          hallucinationDetected: fixResult.hallucinationDetected,
+          businessRiskAssessment,
+          audioNormalization: normalizationResult,
+          audioQuality
         }
       );
       
-      // 7. Return transcription result
+      // 10. Return enhanced transcription result
       const processingTime = (Date.now() - startTime) / 1000; // in seconds
       
       return {
@@ -118,7 +186,18 @@ export class TranscriptionService {
         processing_time: processingTime,
         word_count: wordCount,
         duration,
-        status: 'completed'
+        status: 'completed',
+        // Story 1A.2.1: Enhanced response data
+        business_risk: businessRiskAssessment,
+        routing_decision: businessRiskAssessment.decision,
+        audio_quality: {
+          normalized: true,
+          quality_score: audioQuality.score,
+          original_size: normalizationResult.originalSize,
+          normalized_size: normalizationResult.normalizedSize
+        },
+        critical_errors: fixResult.criticalErrors,
+        hallucination_detected: fixResult.hallucinationDetected
       };
       
     } catch (error: any) {
@@ -132,7 +211,11 @@ export class TranscriptionService {
         confidence_score: 0,
         processing_time: (Date.now() - startTime) / 1000,
         status: 'failed',
-        error: this.getUserFriendlyError(error)
+        error: this.getUserFriendlyError(error),
+        // Include default values for enhanced fields
+        routing_decision: 'MANUAL_REVIEW', // Failed transcriptions need manual review
+        critical_errors: [],
+        hallucination_detected: false
       };
     }
   }
@@ -192,9 +275,10 @@ export class TranscriptionService {
   }
 
   /**
-   * Calculate confidence score from Whisper response
+   * Story 1A.2.1: Enhanced confidence calculation
+   * Now considers audio quality and hallucination risk
    */
-  private calculateConfidence(whisperResponse: any): number {
+  private calculateConfidence(whisperResponse: any, audioQuality?: { score: number }): number {
     // Whisper doesn't directly provide confidence scores
     // We calculate based on response characteristics
     
@@ -222,11 +306,20 @@ export class TranscriptionService {
       confidence = Math.min(confidence, 50); // Very short transcription
     }
     
+    // Story 1A.2.1: Factor in audio quality
+    if (audioQuality) {
+      if (audioQuality.score < 50) {
+        confidence = Math.min(confidence, 60); // Poor audio quality
+      } else if (audioQuality.score > 80) {
+        confidence = Math.min(100, confidence + 5); // High audio quality bonus
+      }
+    }
+    
     return Math.round(confidence);
   }
 
   /**
-   * Save transcription to database
+   * Story 1A.2.1: Enhanced database save with business risk metadata
    */
   private async saveTranscription(
     submissionId: string,
@@ -237,15 +330,36 @@ export class TranscriptionService {
       wordCount?: number;
       originalTranscription?: string;
       fixesApplied?: string[];
+      criticalErrors?: string[];
+      hallucinationDetected?: boolean;
+      businessRiskAssessment?: BusinessRiskAssessment;
+      audioNormalization?: AudioNormalizationResult;
+      audioQuality?: any;
     }
   ): Promise<void> {
     try {
+      // Determine processing status based on business risk
+      let processing_status = 'transcribed';
+      if (metadata?.businessRiskAssessment) {
+        switch (metadata.businessRiskAssessment.decision) {
+          case 'URGENT_REVIEW':
+            processing_status = 'urgent_review';
+            break;
+          case 'MANUAL_REVIEW':
+            processing_status = 'manual_review';
+            break;
+          case 'AUTO_APPROVE':
+            processing_status = 'transcribed';
+            break;
+        }
+      }
+      
       const { error } = await supabaseAdmin
         .from('whatsapp_submissions')
         .update({
           transcription,
           confidence_score: confidence,
-          processing_status: 'transcribed',
+          processing_status,
           transcription_metadata: metadata,
           processed_at: new Date().toISOString()
         })

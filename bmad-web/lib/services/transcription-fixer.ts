@@ -1,11 +1,50 @@
 import openai, { GPT_CONFIG } from '../openai';
 
 /**
- * Irish Construction Transcription Fixer
- * Applies domain-specific corrections to transcriptions
+ * Story 1A.2.1: Enhanced Irish Construction Transcription Fixer
+ * Applies domain-specific corrections with critical error detection
+ * Includes hallucination guards and business-critical pattern detection
  */
 
-// Pattern-based corrections for common transcription errors
+// Critical error patterns that force manual review (Story 1A.2.1)
+export const CRITICAL_ERROR_PATTERNS = {
+  // Currency errors - Critical business risk
+  currency: [
+    { pattern: /£(\d)/g, replacement: '€$1', critical: true, reason: 'Currency error: Ireland uses euros, not pounds' },
+    { pattern: /\bpounds?\b/gi, replacement: 'euros', critical: true, reason: 'Currency terminology error' },
+    { pattern: /\bpound\b/gi, replacement: 'euro', critical: true, reason: 'Currency terminology error' },
+    { pattern: /\bquid\b/gi, replacement: 'euro', critical: true, reason: 'Slang currency term error' },
+    { pattern: /\bsterling\b/gi, replacement: 'euro', critical: true, reason: 'Wrong currency system' },
+  ],
+  
+  // Time format errors - High business risk
+  timeErrors: [
+    { pattern: /\bat 30(?!\d)/gi, replacement: 'at 8:30', critical: true, reason: 'Ambiguous time format - likely morning delivery' },
+    { pattern: /\bat (\d{1,2})(?!\d|:|\s*(am|pm|hours?|minutes?|cubic|tonnes?|bags?))/gi, 
+      replacement: (match: string, num: string) => {
+        const n = parseInt(num);
+        if (n >= 6 && n <= 20) return `at ${num}:30`;
+        return match;
+      },
+      critical: true, reason: 'Ambiguous time reference'
+    },
+  ],
+  
+  // Suspicious amounts - Force review for high values
+  suspiciousAmounts: [
+    { pattern: /€\d{4,}/g, critical: true, reason: 'High monetary value requires verification' },
+    { pattern: /\b\d{4,}\s*euros?\b/gi, critical: true, reason: 'Large euro amount needs review' },
+  ],
+  
+  // Common hallucination patterns
+  hallucinations: [
+    { pattern: /\bsafe farming\b/gi, replacement: 'safe working', critical: true, reason: 'Common Whisper hallucination pattern' },
+    { pattern: /\btele porter\b/gi, replacement: 'teleporter', critical: false, reason: 'Equipment name error' },
+    { pattern: /\b7\s*end\b/gi, replacement: '7N', critical: false, reason: 'Block strength notation error' },
+  ]
+};
+
+// Standard pattern-based corrections for common transcription errors
 export const IRISH_CONSTRUCTION_PATTERNS = {
   // Currency corrections - Ireland uses euros
   currency: [
@@ -66,51 +105,102 @@ export const IRISH_CONSTRUCTION_PATTERNS = {
 };
 
 /**
- * Apply pattern-based fixes to transcription
+ * Apply pattern-based fixes to transcription with critical error detection
+ * Story 1A.2.1: Enhanced with hallucination guards and critical pattern detection
  */
-export function applyPatternFixes(text: string): string {
+export function applyPatternFixes(text: string): {
+  fixed: string;
+  criticalErrors: string[];
+  standardFixes: string[];
+  hallucinationDetected: boolean;
+} {
   let fixed = text;
+  const criticalErrors: string[] = [];
+  const standardFixes: string[] = [];
+  let hallucinationDetected = false;
   
-  // Apply all pattern categories
+  // First, detect and fix critical error patterns
+  Object.entries(CRITICAL_ERROR_PATTERNS).forEach(([category, patterns]) => {
+    patterns.forEach(({ pattern, replacement, critical, reason }) => {
+      const matches = fixed.match(pattern);
+      if (matches) {
+        if (critical) {
+          criticalErrors.push(`${reason}: ${matches.join(', ')}`);
+          if (category === 'hallucinations') {
+            hallucinationDetected = true;
+          }
+        }
+        
+        // Apply the fix
+        if (typeof replacement === 'string') {
+          fixed = fixed.replace(pattern, replacement);
+        } else {
+          fixed = fixed.replace(pattern, replacement as any);
+        }
+      }
+    });
+  });
+  
+  // Then apply standard pattern fixes
   Object.values(IRISH_CONSTRUCTION_PATTERNS).forEach(patterns => {
     patterns.forEach(({ pattern, replacement }) => {
+      const originalFixed = fixed;
       if (typeof replacement === 'string') {
         fixed = fixed.replace(pattern, replacement);
       } else {
         fixed = fixed.replace(pattern, replacement as any);
       }
+      
+      if (fixed !== originalFixed) {
+        standardFixes.push('Applied standard construction terminology fixes');
+      }
     });
   });
   
-  return fixed;
+  return {
+    fixed,
+    criticalErrors,
+    standardFixes,
+    hallucinationDetected
+  };
 }
 
 /**
- * Use GPT-4 to validate and fix remaining context-dependent errors
+ * Story 1A.2.1: Enhanced GPT-4 validation with hallucination guards
+ * Includes token expansion detection and critical error validation
  */
 export async function validateWithGPT4(
   transcription: string,
-  confidence?: number
+  confidence?: number,
+  options?: {
+    checkHallucination?: boolean;
+    maxTokenExpansion?: number;
+  }
 ): Promise<{
   corrected: string;
   changes: string[];
   confidence: number;
+  hallucinationRisk: boolean;
+  tokenExpansion: number;
 }> {
+  const { checkHallucination = true, maxTokenExpansion = 15 } = options || {};
   console.log('🤖 GPT-4 validation input:', {
     inputText: transcription.substring(0, 200) + '...',
     inputLength: transcription.length,
     confidence
   });
   
-  const prompt = `Fix this Irish construction site transcription. Apply these rules:
+  const prompt = `Fix this Irish construction site transcription with STRICT hallucination detection. Apply these rules:
 
-CRITICAL RULES:
+CRITICAL RULES (Story 1A.2.1):
 1. Currency is ALWAYS euros (€), NEVER pounds (£) - Ireland uses euros
 2. Concrete grades: C25/30, C30/37, C20/25 (forward slash format)
 3. Times: Convert "at 30" to "at 8:30" if context suggests morning delivery
 4. Block strength: "7N" not "7 end" or "seven end"
 5. Common Irish construction terms: "crack on", "safe working", "lads"
 6. Measurements: metres, tonnes, millimetres (not yards/feet)
+7. DETECT HALLUCINATIONS: "safe farming", "tele porter", repetitive patterns
+8. REJECT if output is >15% longer than input (token expansion)
 
 TRANSCRIPTION:
 ${transcription}
@@ -119,10 +209,14 @@ Return a JSON object with:
 {
   "corrected": "the fixed transcription",
   "changes": ["list of changes made"],
-  "confidence": 0-100 score
+  "confidence": 0-100 score,
+  "hallucination_detected": false,
+  "token_expansion_percent": 0
 }
 
-Fix ONLY clear errors. Preserve Irish colloquialisms and natural speech patterns.`;
+Fix ONLY clear errors. Preserve Irish colloquialisms and natural speech patterns.
+IF you detect hallucination patterns, set hallucination_detected to true.
+IF the corrected text is significantly longer than input, indicate token expansion.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -143,17 +237,41 @@ Fix ONLY clear errors. Preserve Irish colloquialisms and natural speech patterns
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
     
+    // Calculate token expansion percentage
+    const originalLength = transcription.length;
+    const correctedLength = (result.corrected || transcription).length;
+    const tokenExpansion = ((correctedLength - originalLength) / originalLength) * 100;
+    
+    // Hallucination guard: reject if token expansion exceeds threshold
+    const hallucinationRisk = result.hallucination_detected || tokenExpansion > maxTokenExpansion;
+    
     console.log('🤖 GPT-4 validation output:', {
       correctedText: result.corrected?.substring(0, 200) + '...' || 'NO CORRECTION',
       changes: result.changes || [],
       confidence: result.confidence,
-      outputLength: result.corrected?.length || 0
+      outputLength: correctedLength,
+      tokenExpansion: tokenExpansion.toFixed(1) + '%',
+      hallucinationRisk
     });
+    
+    // If hallucination detected, return original with warning
+    if (hallucinationRisk && checkHallucination) {
+      console.warn('🚨 Hallucination detected - returning original transcription');
+      return {
+        corrected: transcription,
+        changes: ['WARNING: Potential hallucination detected - no changes applied'],
+        confidence: Math.max(30, (confidence || 70) - 20),
+        hallucinationRisk: true,
+        tokenExpansion
+      };
+    }
     
     return {
       corrected: result.corrected || transcription,
       changes: result.changes || [],
-      confidence: result.confidence || confidence || 70
+      confidence: result.confidence || confidence || 70,
+      hallucinationRisk,
+      tokenExpansion
     };
   } catch (error) {
     console.error('GPT-4 validation failed:', error);
@@ -161,55 +279,110 @@ Fix ONLY clear errors. Preserve Irish colloquialisms and natural speech patterns
     return {
       corrected: transcription,
       changes: [],
-      confidence: confidence || 60
+      confidence: confidence || 60,
+      hallucinationRisk: false,
+      tokenExpansion: 0
     };
   }
 }
 
 /**
- * Main transcription fixing pipeline
+ * Story 1A.2.1: Enhanced transcription fixing pipeline with critical error detection
+ * Includes hallucination guards and business risk assessment
  */
 export async function fixTranscription(
   rawTranscription: string,
   options: {
     useGPT4?: boolean;
     initialConfidence?: number;
+    enableHallucinationGuards?: boolean;
+    maxTokenExpansion?: number;
   } = {}
 ): Promise<{
   original: string;
   fixed: string;
   confidence: number;
   changes: string[];
+  criticalErrors: string[];
+  hallucinationDetected: boolean;
+  requiresManualReview: boolean;
 }> {
-  const { useGPT4 = true, initialConfidence = 70 } = options;
+  const { 
+    useGPT4 = true, 
+    initialConfidence = 70, 
+    enableHallucinationGuards = true,
+    maxTokenExpansion = 15 
+  } = options;
   
-  // Step 1: Apply pattern-based fixes
-  const patternFixed = applyPatternFixes(rawTranscription);
+  console.log('🔧 Starting enhanced transcription fix (Story 1A.2.1):', {
+    length: rawTranscription.length,
+    useGPT4,
+    initialConfidence,
+    enableHallucinationGuards
+  });
+  
+  // Step 1: Apply pattern-based fixes with critical error detection
+  const patternResult = applyPatternFixes(rawTranscription);
   
   // Track changes from patterns
-  const patternChanges: string[] = [];
-  if (patternFixed !== rawTranscription) {
-    patternChanges.push('Applied pattern-based corrections');
+  const allChanges: string[] = [];
+  if (patternResult.criticalErrors.length > 0) {
+    allChanges.push(...patternResult.criticalErrors.map(e => `CRITICAL: ${e}`));
+  }
+  if (patternResult.standardFixes.length > 0) {
+    allChanges.push(...patternResult.standardFixes);
   }
   
-  // Step 2: GPT-4 validation if enabled and confidence is low
-  if (useGPT4 && (initialConfidence < 85 || patternFixed.includes('£') || patternFixed.includes('pound'))) {
-    const gptResult = await validateWithGPT4(patternFixed, initialConfidence);
+  let requiresManualReview = patternResult.criticalErrors.length > 0;
+  let hallucinationDetected = patternResult.hallucinationDetected;
+  
+  // Step 2: GPT-4 validation if enabled and conditions met
+  const shouldUseGPT4 = useGPT4 && (
+    initialConfidence < 85 || 
+    patternResult.fixed.includes('£') || 
+    patternResult.fixed.includes('pound') ||
+    patternResult.criticalErrors.length > 0
+  );
+  
+  if (shouldUseGPT4) {
+    console.log('🤖 Using GPT-4 validation due to critical errors or low confidence');
+    
+    const gptResult = await validateWithGPT4(
+      patternResult.fixed, 
+      initialConfidence,
+      { 
+        checkHallucination: enableHallucinationGuards, 
+        maxTokenExpansion 
+      }
+    );
+    
+    // Update hallucination detection
+    if (gptResult.hallucinationRisk) {
+      hallucinationDetected = true;
+      requiresManualReview = true;
+      allChanges.push('WARNING: Potential hallucination detected');
+    }
     
     return {
       original: rawTranscription,
       fixed: gptResult.corrected,
       confidence: gptResult.confidence,
-      changes: [...patternChanges, ...gptResult.changes]
+      changes: [...allChanges, ...gptResult.changes],
+      criticalErrors: patternResult.criticalErrors,
+      hallucinationDetected,
+      requiresManualReview
     };
   }
   
   // Return pattern-fixed version
   return {
     original: rawTranscription,
-    fixed: patternFixed,
+    fixed: patternResult.fixed,
     confidence: initialConfidence,
-    changes: patternChanges
+    changes: allChanges,
+    criticalErrors: patternResult.criticalErrors,
+    hallucinationDetected,
+    requiresManualReview
   };
 }
 
