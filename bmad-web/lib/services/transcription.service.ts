@@ -38,20 +38,51 @@ export class TranscriptionService {
     const startTime = Date.now();
     
     try {
+      console.log('🔍 PROCESSING START:', { 
+        submissionId: request.submissionId, 
+        fileUrl: request.fileUrl,
+        userId: request.userId 
+      });
+      
       // 1. Download file from Supabase storage
+      console.log('📁 Downloading file from Supabase...');
       const audioFile = await this.getFileFromStorage(request.fileUrl);
+      console.log('📁 File downloaded:', { 
+        size: audioFile.size, 
+        type: audioFile.type,
+        url: request.fileUrl 
+      });
       
       // 2. Send to OpenAI Whisper API (or new model)
+      console.log('🎤 Calling OpenAI transcription API...');
       const whisperResponse = await this.callWhisperAPI(audioFile, request.fileUrl);
+      console.log('🎤 OpenAI response received:', { 
+        hasText: !!whisperResponse.text,
+        textLength: whisperResponse.text?.length || 0,
+        firstChars: whisperResponse.text?.substring(0, 100) || 'NO TEXT'
+      });
       
       // 3. Get raw transcription
-      const rawTranscription = whisperResponse.text || whisperResponse || '';
+      const rawTranscription = whisperResponse.text || '';
       const initialConfidence = this.calculateConfidence(whisperResponse);
       
       // 4. Apply Irish construction fixes
+      console.log('🔧 Raw transcription before fixes:', {
+        text: rawTranscription.substring(0, 200) + '...',
+        confidence: initialConfidence
+      });
+      
       const fixResult = await fixTranscription(rawTranscription, {
         useGPT4: initialConfidence < 85, // Use GPT-4 for low confidence
         initialConfidence
+      });
+      
+      console.log('🔧 After fixes applied:', {
+        originalLength: rawTranscription.length,
+        fixedLength: fixResult.fixed.length,
+        changes: fixResult.changes,
+        confidence: fixResult.confidence,
+        fixedText: fixResult.fixed.substring(0, 200) + '...'
       });
       
       // 5. Use the fixed transcription

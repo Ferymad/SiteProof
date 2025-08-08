@@ -18,10 +18,10 @@ export default openai;
 
 // Configuration constants for consistent API usage
 export const WHISPER_CONFIG = {
-  model: (process.env.TRANSCRIPTION_MODEL || 'gpt-4o-mini') as string, // Using gpt-4o-mini for better accuracy and lower cost
+  model: (process.env.TRANSCRIPTION_MODEL || 'whisper-1') as string, // whisper-1 is proven to work
   language: 'en', // English with Irish accent support
   temperature: 0.0, // Zero temperature for maximum consistency
-  response_format: 'text' as const, // gpt-4o-mini doesn't support verbose_json yet
+  response_format: 'verbose_json' as const, // whisper-1 supports verbose_json for confidence scores
   // Enhanced Irish construction site prompt with domain-specific context
   prompt: `Irish construction site voice recording. 
 CRITICAL CONTEXT:

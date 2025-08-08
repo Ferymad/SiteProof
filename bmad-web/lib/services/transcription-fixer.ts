@@ -20,11 +20,13 @@ export const IRISH_CONSTRUCTION_PATTERNS = {
   concreteGrades: [
     { pattern: /\bc(\d{2})(\d{2})\b/gi, replacement: 'C$1/$2' },
     { pattern: /\bc(\d{2})-(\d{2})\b/gi, replacement: 'C$1/$2' },
+    { pattern: /\bc(\d{2})\s*slash\s*(\d{2})\b/gi, replacement: 'C$1/$2' }, // Fix "C25 slash 30"
     { pattern: /\bc\s*(\d{2})\s*\/?\s*(\d{2})\b/gi, replacement: 'C$1/$2' },
   ],
   
   // Time corrections (context-aware)
   times: [
+    { pattern: /\bat 30(?!\d)/gi, replacement: 'at 8:30' }, // Common morning delivery time
     { pattern: /\bat (\d{1,2})(?!\d|:|\s*(am|pm|hours?|minutes?|cubic|tonnes?|bags?))/gi, 
       replacement: (match: string, num: string) => {
         const n = parseInt(num);
@@ -94,6 +96,12 @@ export async function validateWithGPT4(
   changes: string[];
   confidence: number;
 }> {
+  console.log('🤖 GPT-4 validation input:', {
+    inputText: transcription.substring(0, 200) + '...',
+    inputLength: transcription.length,
+    confidence
+  });
+  
   const prompt = `Fix this Irish construction site transcription. Apply these rules:
 
 CRITICAL RULES:
@@ -134,6 +142,13 @@ Fix ONLY clear errors. Preserve Irish colloquialisms and natural speech patterns
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    console.log('🤖 GPT-4 validation output:', {
+      correctedText: result.corrected?.substring(0, 200) + '...' || 'NO CORRECTION',
+      changes: result.changes || [],
+      confidence: result.confidence,
+      outputLength: result.corrected?.length || 0
+    });
     
     return {
       corrected: result.corrected || transcription,
