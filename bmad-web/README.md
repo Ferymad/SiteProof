@@ -18,15 +18,23 @@ This implements the basic web form for MVP validation with:
    ```
 
 2. **Configure Supabase**
-   - Create a new Supabase project
-   - Copy `.env.local.example` to `.env.local`
-   - Add your Supabase URL and anon key
+   - Go to [supabase.com](https://supabase.com) and create a new project
+   - Go to Settings > API to get your URL and anon key
+   - Copy `.env.local.example` to `.env.local` and add your credentials:
+     ```env
+     NEXT_PUBLIC_SUPABASE_URL=your-project-url
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+     SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+     OPENAI_API_KEY=your-openai-key
+     TRANSCRIPTION_MODEL=gpt-4o-mini  # For better Irish accent accuracy
+     ```
 
 3. **Set up Database Schema**
    - Go to your Supabase project dashboard
    - Navigate to the SQL Editor
    - Copy and paste the contents of `supabase-schema.sql` into the SQL editor
    - Click "Run" to execute the schema
+   - This creates tables for submissions, storage buckets, and security policies
    
    This will create:
    - `whatsapp_submissions` table with proper RLS policies

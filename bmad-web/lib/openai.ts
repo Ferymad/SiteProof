@@ -18,10 +18,22 @@ export default openai;
 
 // Configuration constants for consistent API usage
 export const WHISPER_CONFIG = {
-  model: 'whisper-1' as const,
+  model: (process.env.TRANSCRIPTION_MODEL || 'gpt-4o-mini') as string, // Using gpt-4o-mini for better accuracy and lower cost
   language: 'en', // English with Irish accent support
-  temperature: 0.2, // Lower temperature for more consistent results
-  response_format: 'verbose_json' as const, // Get timestamps and confidence
+  temperature: 0.0, // Zero temperature for maximum consistency
+  response_format: 'text' as const, // gpt-4o-mini doesn't support verbose_json yet
+  // Enhanced Irish construction site prompt with domain-specific context
+  prompt: `Irish construction site voice recording. 
+CRITICAL CONTEXT:
+- Currency: Always euros (€), never pounds (£)
+- Concrete grades format: C25/30, C30/37, C20/25 (with forward slash)
+- Time format: 24-hour or colloquial ("half eight" = 8:30, "quarter past" = :15)
+- Common Irish construction phrases: "crack on", "safe working", "lads", "gear"
+- Materials: 7N blocks, 12mm/16mm rebar, ready-mix concrete, shuttering, formwork
+- Measurements: metres, millimetres, tonnes, cubic metres (never yards/feet)
+- Weather terms: "soft day" (light rain), "lashing" (heavy rain)
+- Equipment: teleporter, dumper, JCB, tower crane, pump truck
+- Ballymun, Dublin site context with Irish accents and terminology`
 };
 
 export const GPT_CONFIG = {

@@ -11,6 +11,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import openai, { WHISPER_CONFIG, AI_ERROR_MESSAGES } from '@/lib/openai';
 import { File as FormDataFile } from 'formdata-node';
+import { fixTranscription, calculateConfidence as calculateFixerConfidence } from './transcription-fixer';
 
 export interface TranscriptionRequest {
   fileUrl: string;
@@ -40,24 +41,44 @@ export class TranscriptionService {
       // 1. Download file from Supabase storage
       const audioFile = await this.getFileFromStorage(request.fileUrl);
       
-      // 2. Send to OpenAI Whisper API
+      // 2. Send to OpenAI Whisper API (or new model)
       const whisperResponse = await this.callWhisperAPI(audioFile, request.fileUrl);
       
-      // 3. Process response and calculate confidence
-      const transcription = whisperResponse.text || '';
-      const confidence = this.calculateConfidence(whisperResponse);
+      // 3. Get raw transcription
+      const rawTranscription = whisperResponse.text || whisperResponse || '';
+      const initialConfidence = this.calculateConfidence(whisperResponse);
+      
+      // 4. Apply Irish construction fixes
+      const fixResult = await fixTranscription(rawTranscription, {
+        useGPT4: initialConfidence < 85, // Use GPT-4 for low confidence
+        initialConfidence
+      });
+      
+      // 5. Use the fixed transcription
+      const transcription = fixResult.fixed;
+      const confidence = fixResult.confidence;
       const duration = whisperResponse.duration || 0;
       const wordCount = transcription.split(/\s+/).filter(word => word.length > 0).length;
       
-      // 4. Store in database
+      // Log improvements for monitoring
+      if (fixResult.changes.length > 0) {
+        console.log('Transcription fixes applied:', fixResult.changes);
+      }
+      
+      // 6. Store in database
       await this.saveTranscription(
         request.submissionId,
         transcription,
         confidence,
-        { duration, wordCount }
+        { 
+          duration, 
+          wordCount,
+          originalTranscription: rawTranscription,
+          fixesApplied: fixResult.changes
+        }
       );
       
-      // 5. Return transcription result
+      // 7. Return transcription result
       const processingTime = (Date.now() - startTime) / 1000; // in seconds
       
       return {
@@ -128,9 +149,9 @@ export class TranscriptionService {
         language: WHISPER_CONFIG.language,
         temperature: WHISPER_CONFIG.temperature,
         response_format: WHISPER_CONFIG.response_format,
-        // Add construction-specific prompt to improve accuracy
-        prompt: 'Construction site voice note with Irish accent. Common terms: scaffolding, formwork, concrete, steel, rebar, foundations, slab, blocks.'
-      });
+        // Use the enhanced prompt from config
+        prompt: WHISPER_CONFIG.prompt
+      } as any);
       
       return response;
     } catch (error: any) {
@@ -180,7 +201,12 @@ export class TranscriptionService {
     submissionId: string,
     transcription: string,
     confidence: number,
-    metadata?: { duration?: number; wordCount?: number }
+    metadata?: { 
+      duration?: number; 
+      wordCount?: number;
+      originalTranscription?: string;
+      fixesApplied?: string[];
+    }
   ): Promise<void> {
     try {
       const { error } = await supabaseAdmin
