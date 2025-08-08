@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { TranscriptionService } from '@/lib/services/transcription.service';
 import { ExtractionService } from '@/lib/services/extraction.service';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 /**
  * Story 1A.2: Combined Processing Endpoint
@@ -39,8 +39,8 @@ export default async function handler(
       });
     }
     
-    // Get submission details
-    const { data: submission, error: fetchError } = await supabase
+    // Get submission details using admin client (bypasses RLS)
+    const { data: submission, error: fetchError } = await supabaseAdmin
       .from('whatsapp_submissions')
       .select('*')
       .eq('id', submission_id)

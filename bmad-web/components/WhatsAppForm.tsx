@@ -156,27 +156,27 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
 
-        if (data && !error) {
-          setLastSubmissionId(data.id)
+        if (data && data.length > 0 && !error) {
+          const submission = data[0]
+          setLastSubmissionId(submission.id)
           
           // Set processing result based on existing data
-          if (data.processing_status === 'completed' && data.transcription) {
+          if (submission.processing_status === 'completed' && submission.transcription) {
             setProcessingResult({
-              transcription: data.transcription,
-              transcription_confidence: data.confidence_score,
-              extracted_data: data.extracted_data,
-              extraction_confidence: data.extraction_confidence,
-              combined_confidence: Math.round((data.confidence_score + data.extraction_confidence) / 2),
+              transcription: submission.transcription,
+              transcription_confidence: submission.confidence_score,
+              extracted_data: submission.extracted_data,
+              extraction_confidence: submission.extraction_confidence,
+              combined_confidence: Math.round((submission.confidence_score + submission.extraction_confidence) / 2),
               status: 'completed'
             })
-          } else if (data.processing_status === 'failed') {
+          } else if (submission.processing_status === 'failed') {
             setProcessingResult({
               status: 'failed',
-              error: data.processing_error || 'Processing failed'
+              error: submission.processing_error || 'Processing failed'
             })
-          } else if (data.processing_status === 'pending') {
+          } else if (submission.processing_status === 'pending') {
             setProcessingResult({ status: 'pending' })
           }
         }

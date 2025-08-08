@@ -8,7 +8,7 @@
  * Future Django equivalent: apps/processing/services.py
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import openai, { WHISPER_CONFIG, AI_ERROR_MESSAGES } from '@/lib/openai';
 import { File as FormDataFile } from 'formdata-node';
 
@@ -92,7 +92,7 @@ export class TranscriptionService {
     try {
       // Extract bucket and path from URL
       // Format: voice-notes/userId/timestamp.ext
-      const { data, error } = await supabase.storage
+      const { data, error } = await supabaseAdmin.storage
         .from('voice-notes')
         .download(fileUrl);
       
@@ -183,7 +183,7 @@ export class TranscriptionService {
     metadata?: { duration?: number; wordCount?: number }
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('whatsapp_submissions')
         .update({
           transcription,
@@ -212,7 +212,7 @@ export class TranscriptionService {
     errorMessage?: string
   ): Promise<void> {
     try {
-      await supabase
+      await supabaseAdmin
         .from('whatsapp_submissions')
         .update({
           processing_status: status,

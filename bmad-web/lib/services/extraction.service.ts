@@ -10,7 +10,7 @@
  */
 
 import openai, { GPT_CONFIG, CONSTRUCTION_SYSTEM_PROMPT, AI_ERROR_MESSAGES } from '@/lib/openai';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export interface ExtractionRequest {
   transcription: string;
@@ -227,7 +227,7 @@ Return the data in the specified JSON format.`;
     confidence: number
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('whatsapp_submissions')
         .update({
           extracted_data: extractedData,
@@ -255,7 +255,7 @@ Return the data in the specified JSON format.`;
     errorMessage?: string
   ): Promise<void> {
     try {
-      await supabase
+      await supabaseAdmin
         .from('whatsapp_submissions')
         .update({
           processing_status: status,
