@@ -1,33 +1,209 @@
 import openai, { GPT_CONFIG } from '../openai';
 
 /**
- * Story 1A.2.1: Enhanced Irish Construction Transcription Fixer
- * Applies domain-specific corrections with critical error detection
- * Includes hallucination guards and business-critical pattern detection
+ * Story 1A.2.1 Refactored: Generalizable Irish Construction Transcription Fixer
+ * Applies tiered pattern corrections with pattern effectiveness tracking
+ * Reduces over-fitting to specific test cases while maintaining accuracy
  */
 
-// Critical error patterns that force manual review (Story 1A.2.1)
+// Pattern effectiveness tracking interface
+export interface PatternMetrics {
+  pattern: string;
+  timesApplied: number;
+  successfulApplications: number;
+  falsePositives: number;
+  accuracy: number;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface PatternApplication {
+  pattern: RegExp | ((match: string, ...groups: string[]) => string);
+  replacement: string | ((match: string, ...groups: string[]) => string);
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  contextRequired?: string[];
+  description: string;
+}
+
+// Tier 1: High-confidence universal patterns (always apply)
+export const UNIVERSAL_PATTERNS = {
+  // Currency corrections - Ireland uses euros (100% applicable across all Irish construction)
+  currency: [
+    { 
+      pattern: /£(\d)/g, 
+      replacement: '€$1', 
+      confidence: 'HIGH' as const,
+      description: 'Pound symbol to euro conversion' 
+    },
+    { 
+      pattern: /\bpounds?\b/gi, 
+      replacement: 'euros', 
+      confidence: 'HIGH' as const,
+      description: 'Pounds terminology to euros' 
+    },
+    { 
+      pattern: /\bpound\b/gi, 
+      replacement: 'euro', 
+      confidence: 'HIGH' as const,
+      description: 'Pound to euro conversion' 
+    },
+    { 
+      pattern: /\bquid\b/gi, 
+      replacement: 'euro', 
+      confidence: 'HIGH' as const,
+      description: 'British slang currency to euro' 
+    },
+    { 
+      pattern: /\bsterling\b/gi, 
+      replacement: 'euro', 
+      confidence: 'HIGH' as const,
+      description: 'Sterling currency system to euro' 
+    },
+  ],
+  
+  // Concrete grade formatting - Universal construction standard
+  concreteGrades: [
+    { 
+      pattern: /\bc(\d{2})(\d{2})\b/gi, 
+      replacement: 'C$1/$2', 
+      confidence: 'HIGH' as const,
+      description: 'Concrete grade formatting (C2530 → C25/30)' 
+    },
+    { 
+      pattern: /\bc(\d{2})-(\d{2})\b/gi, 
+      replacement: 'C$1/$2', 
+      confidence: 'HIGH' as const,
+      description: 'Concrete grade dash to slash format' 
+    },
+    { 
+      pattern: /\bc(\d{2})\s*slash\s*(\d{2})\b/gi, 
+      replacement: 'C$1/$2', 
+      confidence: 'HIGH' as const,
+      description: 'Spoken "slash" to proper concrete notation' 
+    },
+    { 
+      pattern: /\bc\s*(\d{2})\s*\/?\s*(\d{2})\b/gi, 
+      replacement: 'C$1/$2', 
+      confidence: 'HIGH' as const,
+      description: 'Concrete grade spacing normalization' 
+    },
+  ],
+  
+  // Material measurements - Universal metric system
+  measurements: [
+    { 
+      pattern: /(\d+)\s*mil\b/gi, 
+      replacement: '$1mm', 
+      confidence: 'HIGH' as const,
+      description: 'Millimetre abbreviation standardization' 
+    },
+    { 
+      pattern: /(\d+)\s*meter\b/gi, 
+      replacement: '$1 metre', 
+      confidence: 'HIGH' as const,
+      description: 'Singular metre spelling' 
+    },
+    { 
+      pattern: /(\d+)\s*meters\b/gi, 
+      replacement: '$1 metres', 
+      confidence: 'HIGH' as const,
+      description: 'Plural metres spelling' 
+    },
+    { 
+      pattern: /\bcubic meters?\b/gi, 
+      replacement: 'cubic metres', 
+      confidence: 'HIGH' as const,
+      description: 'Cubic metres standardization' 
+    },
+  ],
+};
+
+// Tier 2: Context-dependent patterns (apply with conditions)
+export const CONTEXTUAL_PATTERNS = {
+  // Time corrections - Only with delivery/scheduling context
+  times: [
+    { 
+      pattern: /\bat (\d{1,2})(?!\d|:|\s*(am|pm|hours?|minutes?|cubic|tonnes?|bags?))/gi,
+      replacement: (fullText: string) => (match: string, num: string) => {
+        const n = parseInt(num);
+        const hasDeliveryContext = /delivery|arrived|scheduled|morning|concrete|truck|driver/i.test(fullText);
+        
+        // Only apply if strong delivery context AND reasonable delivery time
+        if (hasDeliveryContext && n >= 7 && n <= 11) {
+          return `at ${num}:30`;
+        }
+        return match; // Keep unchanged if uncertain
+      },
+      confidence: 'MEDIUM' as const,
+      contextRequired: ['delivery', 'scheduled', 'morning', 'truck'],
+      description: 'Time format correction with delivery context'
+    },
+    { 
+      pattern: /\bhalf (\d{1,2})\b/gi, 
+      replacement: '$1:30', 
+      confidence: 'MEDIUM' as const,
+      description: 'Half past time conversion' 
+    },
+    { 
+      pattern: /\bquarter past (\d{1,2})\b/gi, 
+      replacement: '$1:15', 
+      confidence: 'MEDIUM' as const,
+      description: 'Quarter past time conversion' 
+    },
+  ],
+  
+  // Equipment and terminology - Context-sensitive
+  equipment: [
+    { 
+      pattern: /\bJC[PB]\b/gi, 
+      replacement: 'JCB', 
+      confidence: 'MEDIUM' as const,
+      description: 'JCB brand name standardization' 
+    },
+    { 
+      pattern: /\bready mixed?\b/gi, 
+      replacement: 'ready-mix', 
+      confidence: 'MEDIUM' as const,
+      description: 'Ready-mix concrete terminology' 
+    },
+    { 
+      pattern: /\bform work\b/gi, 
+      replacement: 'formwork', 
+      confidence: 'MEDIUM' as const,
+      description: 'Formwork terminology standardization' 
+    },
+  ],
+};
+
+// Tier 3: Experimental patterns (track effectiveness, remove if ineffective)
+export const EXPERIMENTAL_PATTERNS = {
+  // Block strength notation - Monitor for over-fitting
+  blockStrength: [
+    { 
+      pattern: /\b7\s*end\b/gi, 
+      replacement: '7N', 
+      confidence: 'LOW' as const,
+      description: 'Block strength notation (experimental)' 
+    },
+  ],
+  
+  // Common phrases - Track success rate
+  phrases: [
+    { 
+      pattern: /\bcrack and\b/gi, 
+      replacement: 'crack on', 
+      confidence: 'LOW' as const,
+      description: 'Irish phrase correction (experimental)' 
+    },
+  ],
+};
+
+// Critical error patterns that force manual review (Business risk assessment)
 export const CRITICAL_ERROR_PATTERNS = {
   // Currency errors - Critical business risk
   currency: [
     { pattern: /£(\d)/g, replacement: '€$1', critical: true, reason: 'Currency error: Ireland uses euros, not pounds' },
     { pattern: /\bpounds?\b/gi, replacement: 'euros', critical: true, reason: 'Currency terminology error' },
-    { pattern: /\bpound\b/gi, replacement: 'euro', critical: true, reason: 'Currency terminology error' },
-    { pattern: /\bquid\b/gi, replacement: 'euro', critical: true, reason: 'Slang currency term error' },
     { pattern: /\bsterling\b/gi, replacement: 'euro', critical: true, reason: 'Wrong currency system' },
-  ],
-  
-  // Time format errors - High business risk
-  timeErrors: [
-    { pattern: /\bat 30(?!\d)/gi, replacement: 'at 8:30', critical: true, reason: 'Ambiguous time format - likely morning delivery' },
-    { pattern: /\bat (\d{1,2})(?!\d|:|\s*(am|pm|hours?|minutes?|cubic|tonnes?|bags?))/gi, 
-      replacement: (match: string, num: string) => {
-        const n = parseInt(num);
-        if (n >= 6 && n <= 20) return `at ${num}:30`;
-        return match;
-      },
-      critical: true, reason: 'Ambiguous time reference'
-    },
   ],
   
   // Suspicious amounts - Force review for high values
@@ -36,90 +212,229 @@ export const CRITICAL_ERROR_PATTERNS = {
     { pattern: /\b\d{4,}\s*euros?\b/gi, critical: true, reason: 'Large euro amount needs review' },
   ],
   
-  // Common hallucination patterns
+  // Known hallucination patterns - Conservative approach
   hallucinations: [
-    { pattern: /\bsafe farming\b/gi, replacement: 'safe working', critical: true, reason: 'Common Whisper hallucination pattern' },
-    { pattern: /\btele porter\b/gi, replacement: 'teleporter', critical: false, reason: 'Equipment name error' },
-    { pattern: /\b7\s*end\b/gi, replacement: '7N', critical: false, reason: 'Block strength notation error' },
+    { pattern: /\btele porter\b/gi, replacement: 'teleporter', critical: false, reason: 'Equipment name transcription error' },
   ]
 };
 
-// Standard pattern-based corrections for common transcription errors
-export const IRISH_CONSTRUCTION_PATTERNS = {
-  // Currency corrections - Ireland uses euros
-  currency: [
-    { pattern: /£(\d)/g, replacement: '€$1' },
-    { pattern: /\bpounds?\b/gi, replacement: 'euros' },
-    { pattern: /\bpound\b/gi, replacement: 'euro' },
-    { pattern: /\bquid\b/gi, replacement: 'euro' },
-    { pattern: /\bsterling\b/gi, replacement: 'euro' },
-  ],
+// Pattern effectiveness tracker
+class PatternEffectivenessTracker {
+  private static metrics: Map<string, PatternMetrics> = new Map();
   
-  // Concrete grade formatting (C25/30, not C2530 or C25-30)
-  concreteGrades: [
-    { pattern: /\bc(\d{2})(\d{2})\b/gi, replacement: 'C$1/$2' },
-    { pattern: /\bc(\d{2})-(\d{2})\b/gi, replacement: 'C$1/$2' },
-    { pattern: /\bc(\d{2})\s*slash\s*(\d{2})\b/gi, replacement: 'C$1/$2' }, // Fix "C25 slash 30"
-    { pattern: /\bc\s*(\d{2})\s*\/?\s*(\d{2})\b/gi, replacement: 'C$1/$2' },
-  ],
-  
-  // Time corrections (context-aware)
-  times: [
-    { pattern: /\bat 30(?!\d)/gi, replacement: 'at 8:30' }, // Common morning delivery time
-    { pattern: /\bat (\d{1,2})(?!\d|:|\s*(am|pm|hours?|minutes?|cubic|tonnes?|bags?))/gi, 
-      replacement: (match: string, num: string) => {
-        const n = parseInt(num);
-        // Likely time references for construction site
-        if (n >= 6 && n <= 20) {
-          return `at ${num}:30`; // Common half-hour starts
-        }
-        return match; // Keep as is if unclear
+  static trackPatternApplication(
+    pattern: string,
+    applied: boolean,
+    context: string,
+    originalConfidence: number,
+    resultingAccuracy?: number
+  ): void {
+    const existing = this.metrics.get(pattern) || {
+      pattern,
+      timesApplied: 0,
+      successfulApplications: 0,
+      falsePositives: 0,
+      accuracy: 0,
+      confidence: 'MEDIUM' as const
+    };
+    
+    if (applied) {
+      existing.timesApplied++;
+      if (resultingAccuracy && resultingAccuracy > originalConfidence) {
+        existing.successfulApplications++;
+      } else {
+        existing.falsePositives++;
       }
-    },
-    { pattern: /\bhalf (\d{1,2})\b/gi, replacement: '$1:30' },
-    { pattern: /\bquarter past (\d{1,2})\b/gi, replacement: '$1:15' },
-    { pattern: /\bquarter to (\d{1,2})\b/gi, replacement: (m: string, h: string) => `${parseInt(h)-1}:45` },
-  ],
+    }
+    
+    existing.accuracy = existing.timesApplied > 0 
+      ? existing.successfulApplications / existing.timesApplied 
+      : 0;
+    
+    // Update confidence based on success rate
+    if (existing.accuracy > 0.8 && existing.timesApplied >= 5) {
+      existing.confidence = 'HIGH';
+    } else if (existing.accuracy < 0.5 && existing.timesApplied >= 3) {
+      existing.confidence = 'LOW';
+    }
+    
+    this.metrics.set(pattern, existing);
+  }
   
-  // Common misheard construction terms
-  constructionTerms: [
-    { pattern: /\bsafe farming\b/gi, replacement: 'safe working' },
-    { pattern: /\bcrack and\b/gi, replacement: 'crack on' },
-    { pattern: /\b7\s*end\b/gi, replacement: '7N' }, // Concrete block strength
-    { pattern: /\b7\s*n\b/gi, replacement: '7N' }, // Normalize format
-    { pattern: /\btele porter\b/gi, replacement: 'teleporter' },
-    { pattern: /\bJC[PB]\b/gi, replacement: 'JCB' },
-    { pattern: /\bready mixed?\b/gi, replacement: 'ready-mix' },
-    { pattern: /\brebar\b/gi, replacement: 'rebar' }, // Normalize casing
-    { pattern: /\bshutter ring\b/gi, replacement: 'shuttering' },
-    { pattern: /\bform work\b/gi, replacement: 'formwork' },
-  ],
+  static getPatternMetrics(): PatternMetrics[] {
+    const result: PatternMetrics[] = [];
+    this.metrics.forEach((metric) => {
+      result.push(metric);
+    });
+    return result;
+  }
   
-  // Material measurements
-  measurements: [
-    { pattern: /(\d+)\s*mil\b/gi, replacement: '$1mm' }, // millimetres
-    { pattern: /(\d+)\s*meter\b/gi, replacement: '$1 metre' },
-    { pattern: /(\d+)\s*meters\b/gi, replacement: '$1 metres' },
-    { pattern: /\bcubic meters?\b/gi, replacement: 'cubic metres' },
-  ],
-};
+  static getPatternRecommendations(): string[] {
+    const recommendations: string[] = [];
+    
+    this.metrics.forEach((metric) => {
+      if (metric.timesApplied >= 3) {
+        if (metric.accuracy < 0.3) {
+          recommendations.push(`REMOVE: Pattern "${metric.pattern}" has low accuracy (${(metric.accuracy * 100).toFixed(1)}%)`);
+        } else if (metric.accuracy > 0.9 && metric.confidence === 'LOW') {
+          recommendations.push(`PROMOTE: Pattern "${metric.pattern}" has high accuracy (${(metric.accuracy * 100).toFixed(1)}%) - move to higher tier`);
+        }
+      }
+    });
+    
+    return recommendations;
+  }
+}
 
 /**
- * Apply pattern-based fixes to transcription with critical error detection
- * Story 1A.2.1: Enhanced with hallucination guards and critical pattern detection
+ * Apply tiered pattern fixes to transcription with effectiveness tracking
+ * Story 1A.2.1 Refactored: Generalizable approach with conservative application
  */
-export function applyPatternFixes(text: string): {
+export function applyPatternFixes(text: string, confidence?: number): {
   fixed: string;
   criticalErrors: string[];
   standardFixes: string[];
   hallucinationDetected: boolean;
+  patternsApplied: string[];
+  effectivenessData: PatternMetrics[];
 } {
   let fixed = text;
   const criticalErrors: string[] = [];
   const standardFixes: string[] = [];
+  const patternsApplied: string[] = [];
   let hallucinationDetected = false;
+  const originalLength = text.length;
   
-  // First, detect and fix critical error patterns
+  console.log('🔧 Starting tiered pattern application:', {
+    textLength: originalLength,
+    confidence: confidence || 'unknown'
+  });
+  
+  // Step 1: Always apply universal patterns (Tier 1)
+  console.log('📋 Applying universal patterns (Tier 1)...');
+  Object.entries(UNIVERSAL_PATTERNS).forEach(([category, patterns]) => {
+    patterns.forEach(({ pattern, replacement, description }) => {
+      const beforeFix = fixed;
+      const matches = fixed.match(pattern);
+      
+      if (matches) {
+        if (typeof replacement === 'string') {
+          fixed = fixed.replace(pattern, replacement);
+        } else {
+          fixed = fixed.replace(pattern, replacement as any);
+        }
+        
+        if (fixed !== beforeFix) {
+          standardFixes.push(`Universal: ${description}`);
+          patternsApplied.push(description);
+          
+          // Track pattern effectiveness
+          PatternEffectivenessTracker.trackPatternApplication(
+            pattern.toString(),
+            true,
+            category,
+            confidence || 70
+          );
+          
+          console.log(`✅ Applied universal pattern: ${description}`, {
+            matches: matches.length,
+            category
+          });
+        }
+      }
+    });
+  });
+  
+  // Step 2: Apply contextual patterns only with proper context (Tier 2)
+  console.log('🎯 Applying contextual patterns (Tier 2)...');
+  Object.entries(CONTEXTUAL_PATTERNS).forEach(([category, patterns]) => {
+    patterns.forEach((patternConfig) => {
+      const { pattern, replacement, contextRequired, description } = patternConfig;
+      const beforeFix = fixed;
+      
+      // Check if required context is present
+      const hasContext = !contextRequired || contextRequired.some(ctx => 
+        new RegExp(ctx, 'i').test(fixed)
+      );
+      
+      if (hasContext) {
+        const matches = fixed.match(pattern);
+        
+        if (matches) {
+          if (typeof replacement === 'string') {
+            fixed = fixed.replace(pattern, replacement);
+          } else if (typeof replacement === 'function') {
+            // For context-aware replacements, pass the full text
+            const contextAwareReplace = replacement(fixed);
+            fixed = fixed.replace(pattern, contextAwareReplace);
+          }
+          
+          if (fixed !== beforeFix) {
+            standardFixes.push(`Contextual: ${description}`);
+            patternsApplied.push(description);
+            
+            PatternEffectivenessTracker.trackPatternApplication(
+              pattern.toString(),
+              true,
+              category,
+              confidence || 70
+            );
+            
+            console.log(`✅ Applied contextual pattern: ${description}`, {
+              matches: matches.length,
+              category,
+              contextRequired
+            });
+          }
+        }
+      } else {
+        console.log(`⏭️  Skipped contextual pattern (no context): ${description}`, {
+          contextRequired
+        });
+      }
+    });
+  });
+  
+  // Step 3: Apply experimental patterns only for low confidence (Tier 3)
+  if (!confidence || confidence < 70) {
+    console.log('🧪 Applying experimental patterns (Tier 3) - low confidence...');
+    Object.entries(EXPERIMENTAL_PATTERNS).forEach(([category, patterns]) => {
+      patterns.forEach(({ pattern, replacement, description }) => {
+        const beforeFix = fixed;
+        const matches = fixed.match(pattern);
+        
+        if (matches) {
+          if (typeof replacement === 'string') {
+            fixed = fixed.replace(pattern, replacement);
+          } else {
+            fixed = fixed.replace(pattern, replacement as any);
+          }
+          
+          if (fixed !== beforeFix) {
+            standardFixes.push(`Experimental: ${description}`);
+            patternsApplied.push(description);
+            
+            PatternEffectivenessTracker.trackPatternApplication(
+              pattern.toString(),
+              true,
+              category,
+              confidence || 70
+            );
+            
+            console.log(`🧪 Applied experimental pattern: ${description}`, {
+              matches: matches.length,
+              category
+            });
+          }
+        }
+      });
+    });
+  } else {
+    console.log('⏭️  Skipped experimental patterns - confidence too high');
+  }
+  
+  // Step 4: Detect critical error patterns for business risk assessment
+  console.log('🚨 Checking critical error patterns...');
   Object.entries(CRITICAL_ERROR_PATTERNS).forEach(([category, patterns]) => {
     patterns.forEach(({ pattern, replacement, critical, reason }) => {
       const matches = fixed.match(pattern);
@@ -131,37 +446,37 @@ export function applyPatternFixes(text: string): {
           }
         }
         
-        // Apply the fix
-        if (typeof replacement === 'string') {
-          fixed = fixed.replace(pattern, replacement);
-        } else {
-          fixed = fixed.replace(pattern, replacement as any);
+        // Apply the fix if replacement provided
+        if (replacement) {
+          if (typeof replacement === 'string') {
+            fixed = fixed.replace(pattern, replacement);
+          } else {
+            fixed = fixed.replace(pattern, replacement as any);
+          }
         }
       }
     });
   });
   
-  // Then apply standard pattern fixes
-  Object.values(IRISH_CONSTRUCTION_PATTERNS).forEach(patterns => {
-    patterns.forEach(({ pattern, replacement }) => {
-      const originalFixed = fixed;
-      if (typeof replacement === 'string') {
-        fixed = fixed.replace(pattern, replacement);
-      } else {
-        fixed = fixed.replace(pattern, replacement as any);
-      }
-      
-      if (fixed !== originalFixed) {
-        standardFixes.push('Applied standard construction terminology fixes');
-      }
-    });
+  // Calculate improvement metrics
+  const finalLength = fixed.length;
+  const tokenExpansion = ((finalLength - originalLength) / originalLength) * 100;
+  
+  console.log('🔧 Pattern application complete:', {
+    originalLength,
+    finalLength,
+    tokenExpansion: tokenExpansion.toFixed(1) + '%',
+    patternsApplied: patternsApplied.length,
+    criticalErrors: criticalErrors.length
   });
   
   return {
     fixed,
     criticalErrors,
     standardFixes,
-    hallucinationDetected
+    hallucinationDetected,
+    patternsApplied,
+    effectivenessData: PatternEffectivenessTracker.getPatternMetrics()
   };
 }
 
@@ -287,8 +602,8 @@ IF the corrected text is significantly longer than input, indicate token expansi
 }
 
 /**
- * Story 1A.2.1: Enhanced transcription fixing pipeline with critical error detection
- * Includes hallucination guards and business risk assessment
+ * Story 1A.2.1 Refactored: Conservative transcription fixing with effectiveness tracking
+ * Applies tiered pattern system with reduced over-fitting risk
  */
 export async function fixTranscription(
   rawTranscription: string,
@@ -306,6 +621,8 @@ export async function fixTranscription(
   criticalErrors: string[];
   hallucinationDetected: boolean;
   requiresManualReview: boolean;
+  patternsApplied: string[];
+  patternRecommendations: string[];
 }> {
   const { 
     useGPT4 = true, 
@@ -314,15 +631,15 @@ export async function fixTranscription(
     maxTokenExpansion = 15 
   } = options;
   
-  console.log('🔧 Starting enhanced transcription fix (Story 1A.2.1):', {
+  console.log('🔧 Starting tiered transcription fix (Story 1A.2.1 Refactored):', {
     length: rawTranscription.length,
     useGPT4,
     initialConfidence,
     enableHallucinationGuards
   });
   
-  // Step 1: Apply pattern-based fixes with critical error detection
-  const patternResult = applyPatternFixes(rawTranscription);
+  // Step 1: Apply tiered pattern-based fixes with effectiveness tracking
+  const patternResult = applyPatternFixes(rawTranscription, initialConfidence);
   
   // Track changes from patterns
   const allChanges: string[] = [];
@@ -336,16 +653,18 @@ export async function fixTranscription(
   let requiresManualReview = patternResult.criticalErrors.length > 0;
   let hallucinationDetected = patternResult.hallucinationDetected;
   
-  // Step 2: GPT-4 validation if enabled and conditions met
+  // Step 2: Conservative GPT-4 validation conditions
   const shouldUseGPT4 = useGPT4 && (
-    initialConfidence < 85 || 
-    patternResult.fixed.includes('£') || 
-    patternResult.fixed.includes('pound') ||
-    patternResult.criticalErrors.length > 0
+    initialConfidence < 80 || // More conservative threshold
+    patternResult.criticalErrors.length > 0 ||
+    patternResult.hallucinationDetected ||
+    // Only use GPT-4 if clear business risk patterns detected
+    /€\d{4,}/.test(patternResult.fixed) ||
+    /\bpounds?\b/i.test(patternResult.fixed)
   );
   
   if (shouldUseGPT4) {
-    console.log('🤖 Using GPT-4 validation due to critical errors or low confidence');
+    console.log('🤖 Using GPT-4 validation due to business risk patterns or critical errors');
     
     const gptResult = await validateWithGPT4(
       patternResult.fixed, 
@@ -370,24 +689,31 @@ export async function fixTranscription(
       changes: [...allChanges, ...gptResult.changes],
       criticalErrors: patternResult.criticalErrors,
       hallucinationDetected,
-      requiresManualReview
+      requiresManualReview,
+      patternsApplied: patternResult.patternsApplied,
+      patternRecommendations: PatternEffectivenessTracker.getPatternRecommendations()
     };
+  } else {
+    console.log('⏭️  Skipping GPT-4 validation - using pattern fixes only');
   }
   
-  // Return pattern-fixed version
+  // Return pattern-fixed version with effectiveness data
   return {
     original: rawTranscription,
     fixed: patternResult.fixed,
-    confidence: initialConfidence,
+    confidence: calculateConfidence(patternResult.fixed, undefined, false), // Recalculate after fixes
     changes: allChanges,
     criticalErrors: patternResult.criticalErrors,
     hallucinationDetected,
-    requiresManualReview
+    requiresManualReview,
+    patternsApplied: patternResult.patternsApplied,
+    patternRecommendations: PatternEffectivenessTracker.getPatternRecommendations()
   };
 }
 
 /**
- * Confidence scoring based on transcription quality indicators
+ * Conservative confidence scoring based on universal quality indicators
+ * Refactored to avoid over-fitting to specific patterns
  */
 export function calculateConfidence(
   transcription: string,
@@ -396,49 +722,117 @@ export function calculateConfidence(
 ): number {
   let confidence = audioQuality || 75;
   
-  // Boost confidence if critical terms are correct
-  if (transcription.includes('€') && !transcription.includes('£')) confidence += 5;
-  if (/C\d{2}\/\d{2}/.test(transcription)) confidence += 5;
-  if (transcription.includes('7N')) confidence += 3;
+  // Universal positive indicators (high confidence patterns)
+  if (transcription.includes('€') && !transcription.includes('£')) {
+    confidence += 8; // Strong indicator for Irish market
+  }
+  if (/C\d{2}\/\d{2}/.test(transcription)) {
+    confidence += 5; // Proper concrete grade formatting
+  }
+  if (/\d+\s*(metres?|tonnes?|mm)\b/i.test(transcription)) {
+    confidence += 3; // Metric measurements indicate good transcription
+  }
   
-  // Reduce confidence for suspicious patterns
-  if (transcription.includes('£') || transcription.includes('pound')) confidence -= 15;
-  if (/\bat \d{1,2}\b/.test(transcription)) confidence -= 5; // Ambiguous time
-  if (transcription.includes('safe farming')) confidence -= 10;
+  // Universal negative indicators (business risk patterns)
+  if (transcription.includes('£') || /\bpounds?\b/i.test(transcription)) {
+    confidence -= 20; // Major currency error
+  }
+  if (/€\d{4,}/.test(transcription)) {
+    confidence -= 5; // High value requires verification (not error, but risk)
+  }
+  
+  // Conservative approach - only penalize clear error patterns
+  if (/\btele porter\b/i.test(transcription)) {
+    confidence -= 8; // Known hallucination pattern
+  }
+  
+  // Text quality indicators
+  const wordCount = transcription.split(/\s+/).length;
+  if (wordCount < 5) {
+    confidence -= 15; // Very short transcription likely incomplete
+  } else if (wordCount > 200) {
+    confidence -= 5; // Long transcription more prone to drift
+  }
+  
+  // Check for repetitive patterns (hallucination indicator)
+  const words = transcription.toLowerCase().split(/\s+/);
+  const uniqueWords = new Set(words).size;
+  const repetitionRatio = uniqueWords / words.length;
+  
+  if (repetitionRatio < 0.6 && words.length > 20) {
+    confidence -= 10; // High repetition suggests hallucination
+  }
   
   // Reduce if common errors detected
   if (hasCommonErrors) confidence -= 10;
   
   // Clamp between 0-100
-  return Math.max(0, Math.min(100, confidence));
+  return Math.max(0, Math.min(100, Math.round(confidence)));
 }
 
 /**
- * Test the fixer with the Ballymun example
+ * Test the refactored fixer with pattern effectiveness tracking
+ * Now focuses on generalizable patterns rather than specific test case optimization
  */
-export async function testBallymunTranscription(): Promise<void> {
-  const ballymunOriginal = `Morning lads, quick update from the Ballymun site. Concrete delivery arrived today at 30. 45 cubic metres of C25-30 ready mix. Cost came to £2,850 including delivery. Driver said they'll need the pump truck positioned by 10am for the foundation pour. Steel fixers finished the rebar installation yesterday evening. Used 3.2 tonnes of 12mm and 16mm reinforcement bar. Everything's looking good for today's pour. Weather forecast shows rain starting around 2pm. So we need to get this done before then. Foundation cover 180 square metres. Should take about 4 hours to complete. Safe to check this morning. Found one issue. Temporary edge protection on the north side needs reinforcing before we start. Jimmy's sorting that now. Materials for next week. 200 concrete blocks, 7N. 15 bags of cement. 50 tonnes sand and aggregate waterproofing membrane for the basement. Structural engineer is coming Friday morning to inspect before we move to the next phase. All going well. We'll have the ground floor slab ready by the end of the month. Let me know if you need anything else. Weather permitting, this should be a good day for the pour. JP McCarty. Safe farming.`;
+export async function testGeneralizableTranscription(): Promise<void> {
+  // Test multiple different types of construction voice notes, not just Ballymun
+  const testCases = [
+    {
+      name: 'Currency and Time Test',
+      text: 'Delivery cost £1,500 and arrived at 30. Need concrete C25-30 grade.'
+    },
+    {
+      name: 'Equipment and Materials Test', 
+      text: 'The JCP broke down. Need 200 concrete blocks, 7 end strength. Ready mixed concrete arriving.'
+    },
+    {
+      name: 'Measurements Test',
+      text: 'Used 25 mil rebar, 100 cubic meters of concrete, foundation is 50 meter long.'
+    },
+    {
+      name: 'High Confidence Test (should apply minimal fixes)',
+      text: 'Concrete delivery of C25/30 grade arrived at 8:30. Cost was €1,500 euros. All equipment working fine.'
+    }
+  ];
   
-  console.log('Testing Ballymun transcription fix...\n');
-  console.log('ORIGINAL:', ballymunOriginal.substring(0, 100) + '...\n');
+  console.log('🧪 Testing generalized transcription fixing...\n');
   
-  const result = await fixTranscription(ballymunOriginal, { useGPT4: true });
+  for (const testCase of testCases) {
+    console.log(`\n=== ${testCase.name.toUpperCase()} ===`);
+    console.log('ORIGINAL:', testCase.text);
+    
+    const result = await fixTranscription(testCase.text, { useGPT4: false });
+    
+    console.log('FIXED:', result.fixed);
+    console.log('CONFIDENCE:', result.confidence + '%');
+    console.log('PATTERNS APPLIED:', result.patternsApplied);
+    console.log('CRITICAL ERRORS:', result.criticalErrors.length);
+    
+    if (result.patternRecommendations.length > 0) {
+      console.log('RECOMMENDATIONS:', result.patternRecommendations);
+    }
+  }
   
-  console.log('FIXED:', result.fixed.substring(0, 100) + '...\n');
-  console.log('CONFIDENCE:', result.confidence + '%');
-  console.log('CHANGES:', result.changes);
+  // Test pattern effectiveness metrics
+  console.log('\n=== PATTERN EFFECTIVENESS METRICS ===');
+  const metrics = PatternEffectivenessTracker.getPatternMetrics();
   
-  // Check critical fixes
-  const criticalChecks = {
-    'Currency (€ not £)': result.fixed.includes('€2,850') && !result.fixed.includes('£'),
-    'Time (8:30 not 30)': result.fixed.includes('8:30') || result.fixed.includes('08:30'),
-    'Concrete grade (C25/30)': result.fixed.includes('C25/30'),
-    'Block strength (7N)': result.fixed.includes('7N'),
-    'Safe working (not farming)': result.fixed.includes('safe working') && !result.fixed.includes('safe farming')
-  };
+  if (metrics.length > 0) {
+    console.log('Pattern Performance:');
+    metrics.forEach(metric => {
+      console.log(`  ${metric.pattern}: ${(metric.accuracy * 100).toFixed(1)}% accuracy (${metric.timesApplied} applications)`);
+    });
+  } else {
+    console.log('No pattern metrics collected yet. Run more tests to gather effectiveness data.');
+  }
   
-  console.log('\nCRITICAL CHECKS:');
-  Object.entries(criticalChecks).forEach(([check, passed]) => {
-    console.log(`  ${passed ? '✅' : '❌'} ${check}`);
-  });
+  // Test recommendations
+  const recommendations = PatternEffectivenessTracker.getPatternRecommendations();
+  if (recommendations.length > 0) {
+    console.log('\nPattern Improvement Recommendations:');
+    recommendations.forEach(rec => console.log(`  • ${rec}`));
+  }
+  
+  console.log('\n✅ Generalized transcription testing complete');
+  console.log('🎯 System designed for universal Irish construction applicability');
 }

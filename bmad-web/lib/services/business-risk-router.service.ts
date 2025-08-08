@@ -264,7 +264,7 @@ export class BusinessRiskRouterService {
     });
     
     // Look for words repeated more than expected
-    for (const [word, count] of wordCounts) {
+    wordCounts.forEach((count, word) => {
       if (count > 5 && words.length > 50) { // Word repeated >5 times in longer text
         factors.push(`Suspicious repetition: "${word}" appears ${count} times`);
         score += 5;
@@ -273,7 +273,7 @@ export class BusinessRiskRouterService {
           score += 10;
         }
       }
-    }
+    });
     
     // 3. Check for token expansion (sign of hallucination)
     const expectedTokenRatio = transcription.length / 4; // Rough estimate: 4 chars per token
