@@ -1,19 +1,22 @@
-# Epic 2: AI Processing & Human Validation
+# Epic 2: AI Processing & Human Validation 🎯 READY TO START
 
-**Expanded Goal**: Build robust AI processing pipeline with construction-specific accuracy improvements and human validation workflows that scale economically while maintaining integration-ready event architecture.
+**Expanded Goal**: Build enhanced human validation workflows with business risk-based routing that leverages the implemented audio normalization and critical error detection from Story 1A.2.1.
+
+**Prerequisites**: ✅ Story 1A.2.1 (Audio normalization, business risk routing, critical error detection) completed
 
 ## Story 2.1: Construction-Specific AI Processing
 As a PM,
 I want voice notes transcribed with high accuracy for construction terminology,
 so that technical terms, measurements, and material names are captured correctly.
 
-### Acceptance Criteria
-1. **Construction Prompting**: GPT-4 prompts optimized for construction terminology extraction
-2. **Confidence Scoring**: Multi-layered confidence scoring for transcription and data extraction
-3. **Error Detection**: Automated flagging of financial amounts >€1,000 and measurement inconsistencies
-4. **Data Extraction**: Who/what/when/where extraction from transcribed content
-5. **Processing Events**: Supabase real-time events for processing status updates
-6. **Integration Events**: Event bus architecture for future main contractor real-time updates
+### Acceptance Criteria ✅ ENHANCED IN STORY 1A.2.1
+1. **Construction Prompting**: ✅ GPT-4 prompts optimized for construction terminology extraction
+2. **Business Risk Routing**: ✅ IMPLEMENTED - Replaces unreliable confidence scoring
+3. **Critical Error Detection**: ✅ IMPLEMENTED - Currency, time, amount pattern detection
+4. **Audio Enhancement**: ✅ IMPLEMENTED - Normalization for field recordings
+5. **Data Extraction**: Who/what/when/where extraction from transcribed content
+6. **Processing Events**: Supabase real-time events for processing status updates
+7. **Integration Events**: Event bus architecture for future main contractor real-time updates
 
 ## Story 2.2: Human Validation Queue Workflow
 As a validator,

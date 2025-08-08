@@ -86,14 +86,19 @@ so that I can evaluate whether it's suitable for claims submission.
 ## 📊 Validation Success Metrics
 
 **Technical Validation:**
-- ✅ Can process Irish construction voice notes with >85% accuracy
+- ✅ Can process Irish construction voice notes with >85% accuracy (measured by WER on benchmark dataset)
+- ✅ Business-critical fields (currency, time, amounts) routed correctly regardless of AI confidence
+- ✅ Audio normalization improves transcription quality on field recordings
+- ✅ Critical error patterns (£→€, time formats, high amounts) trigger mandatory manual review
 - ✅ PDF output looks professional enough for internal use
 - ✅ Processing time <60 seconds per voice note
 - ✅ System handles typical WhatsApp message format
 
 **Business Validation:**
 - ✅ Saves >50% time vs manual transcription
-- ✅ Construction terminology captured correctly
+- ✅ Construction terminology captured correctly (with enhanced pattern fixes)
+- ✅ Critical business errors (currency, amounts, timing) prevent costly mistakes
+- ✅ Business risk routing ensures high-value items get appropriate attention
 - ✅ Output suitable for informal claims documentation
 - ✅ Interface usable on mobile construction sites
 

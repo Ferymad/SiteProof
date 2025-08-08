@@ -1,4 +1,6 @@
-# User Interface Design Goals
+# User Interface Design Goals - Enhanced with Business Risk UI
+
+**Update**: UI now displays business risk assessments instead of unreliable confidence scores
 
 ## Overall UX Vision
 **"WhatsApp-Simple, Bank-Secure"**: The interface should feel as natural as sending a WhatsApp message but inspire the confidence level of online banking. Construction PMs are comfortable with WhatsApp but need professional-grade reliability for business documentation.

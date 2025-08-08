@@ -44,11 +44,13 @@
 - **Real-time**: Validation queue updates and progress tracking
 - **Storage**: Integrated file handling for voice notes and images
 
-**AI Services: OpenAI + Replicate Backup**
-- **OpenAI Whisper**: Proven accuracy for voice transcription
-- **OpenAI GPT-4**: Construction-specific prompt engineering for data extraction
+**AI Services: OpenAI + Enhanced Processing Pipeline**
+- **OpenAI Whisper**: Proven accuracy for voice transcription with audio normalization enhancement
+- **Audio Processing**: Web Audio API normalization (mono 16kHz WAV) for improved field recording quality
+- **OpenAI GPT-4**: Construction-specific prompt engineering for data extraction with hallucination guards
+- **Business Risk Assessment**: Replaces unreliable AI confidence with real business risk routing
+- **Critical Error Detection**: Pattern-based detection for currency, timing, and amount errors
 - **Replicate**: Cost-effective backup for high-volume processing
-- **Confidence Scoring**: Built-in reliability metrics for human validation triggers
 
 **Deployment: Railway + Vercel**
 - **Railway**: Simple Django deployment with PostgreSQL, auto-scaling, EU regions

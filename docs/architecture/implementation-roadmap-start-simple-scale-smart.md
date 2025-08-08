@@ -5,7 +5,10 @@
 ✅ Basic authentication with Supabase
 ✅ Single project support
 ✅ Core AI processing pipeline
-🔲 **Smart confidence routing** (1 day)
+✅ **Audio normalization pipeline** (2 days) - Story 1A.2.1
+✅ **Business risk routing** (2 days) - Story 1A.2.1 - REPLACES smart confidence routing
+✅ **Critical error detection** (1 day) - Story 1A.2.1
+✅ **Hallucination guards** (4 hours) - Story 1A.2.1
 🔲 **Input recovery service** (4 hours)
 🔲 **Basic monitoring & health checks** (4 hours)
 🔲 **Simple bulk operations** (6 hours)

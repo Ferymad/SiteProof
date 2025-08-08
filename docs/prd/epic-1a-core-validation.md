@@ -15,16 +15,18 @@ so that I can test the core transcription workflow.
 3. **Mobile Responsive**: Works on smartphone for on-site testing
 4. **File Storage**: Voice notes stored in Supabase storage
 
-## Story 1A.2: AI Processing Pipeline
+## Story 1A.2: AI Processing Pipeline ✅ + Enhanced (1A.2.1) ✅
 As a PM,
 I want voice notes transcribed with construction accuracy,
 so that I can validate the core value proposition.
 
 ### Acceptance Criteria
-1. **Whisper Integration**: Single voice note transcription via OpenAI API
-2. **Construction Prompting**: Basic GPT-4 prompt for construction terminology
-3. **Confidence Display**: Show confidence score to user
-4. **Error Handling**: Basic error messages for failed processing
+1. **Whisper Integration**: Single voice note transcription via OpenAI API ✅
+2. **Construction Prompting**: Basic GPT-4 prompt for construction terminology ✅  
+3. **Business Risk Routing**: Route based on business risk, not fake confidence scores ✅
+4. **Error Handling**: Basic error messages for failed processing ✅
+5. **Audio Enhancement**: Audio normalization for field recording quality ✅
+6. **Critical Error Detection**: Mandatory review for currency/time/amount errors ✅
 
 ## Story 1A.3: Evidence Package Generation
 As a PM,

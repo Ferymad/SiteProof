@@ -130,16 +130,19 @@ interface WhatsAppMessage {
 - Has one ProcessedContent
 - Has many MediaAttachments
 
-## ProcessedContent
-**Purpose:** AI-processed and validated content from WhatsApp messages
+## ProcessedContent - Enhanced with Business Risk Assessment
+**Purpose:** AI-processed and validated content from WhatsApp messages with business risk routing
 
 **Key Attributes:**
 - id: UUID - Unique identifier
 - message_id: UUID - Source message
 - transcription: text - Voice transcription (nullable)
 - extracted_data: JSONB - Structured extraction
-- confidence_scores: JSONB - AI confidence metrics
+- business_risk_assessment: JSONB - **NEW**: Business risk metrics replacing confidence scores
+- audio_quality_metrics: JSONB - **NEW**: Audio normalization and quality data
+- critical_errors: JSONB - **NEW**: Detected currency, time, amount errors
 - validation_status: enum - 'pending' | 'auto_approved' | 'validated' | 'rejected'
+- routing_decision: enum - **NEW**: 'AUTO_APPROVE' | 'MANUAL_REVIEW' | 'URGENT_REVIEW'
 - validator_id: UUID - Human validator (nullable)
 - validated_at: timestamp - Validation time
 
@@ -157,13 +160,19 @@ interface ProcessedContent {
     materials?: string[];
     equipment?: string[];
   };
-  confidenceScores: {
-    overall: number;
-    transcription?: number;
-    extraction?: number;
-    amount?: number;
+  businessRiskAssessment: {
+    riskScore: number; // 0-100 business risk level
+    riskFactors: string[]; // Array of risk indicators
+    amountThreshold: boolean; // High-value amount flag
+    criticalErrors: string[]; // Currency, time, quantity errors
+  };
+  audioQualityMetrics?: {
+    qualityScore: number;
+    normalized: boolean;
+    originalFormat: string;
   };
   validationStatus: 'pending' | 'auto_approved' | 'validated' | 'rejected';
+  routingDecision: 'AUTO_APPROVE' | 'MANUAL_REVIEW' | 'URGENT_REVIEW';
   validatorId?: string;
   validatedAt?: Date;
 }

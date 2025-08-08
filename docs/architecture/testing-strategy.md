@@ -1,4 +1,6 @@
-# Testing Strategy
+# Testing Strategy - Enhanced with Audio & AI Testing
+
+**Added**: Audio normalization testing, business risk routing validation, critical error pattern testing
 
 ## Testing Pyramid
 ```

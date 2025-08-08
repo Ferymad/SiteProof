@@ -79,18 +79,20 @@
 **Technology Stack:** Django middleware, PyJWT, Redis for rate limiting
 
 ### WhatsAppService
-**Responsibility:** Process WhatsApp messages through AI pipeline with smart confidence routing
+**Responsibility:** Process WhatsApp messages through AI pipeline with business risk routing
 
 **Key Interfaces:**
 - process_message(message): ProcessedContent
 - transcribe_voice(audio_url): TranscriptionResult
+- normalize_audio(audio_file): NormalizedAudioFile
 - extract_data(text): ExtractedData
-- calculate_confidence(data): ConfidenceScores
-- route_by_risk_factors(content, context): RoutingDecision
+- calculate_business_risk(content, context): BusinessRisk
+- detect_critical_errors(transcription): CriticalError[]
+- route_by_business_risk(content, risk): RoutingDecision
 
-**Dependencies:** OpenAI Client, Replicate Client, Django-Q, SmartConfidenceRouter
+**Dependencies:** OpenAI Client, AudioNormalizer, BusinessRiskRouter, Django-Q
 
-**Technology Stack:** Python, OpenAI SDK, Celery/Django-Q for async
+**Technology Stack:** Python, OpenAI SDK, Web Audio API, Celery/Django-Q for async
 
 ### ValidationQueueManager
 **Responsibility:** Manage human validation queue and SLA tracking
@@ -130,18 +132,32 @@
 
 **Technology Stack:** Django REST Framework, Requests library, Celery
 
-### SmartConfidenceRouter
-**Responsibility:** Dynamic confidence threshold routing based on risk factors
+### BusinessRiskRouter
+**Responsibility:** Business risk assessment and routing decisions for transcription validation
 
 **Key Interfaces:**
-- calculate_risk_score(content, context): float
-- get_confidence_threshold(risk_score, timing): float
-- route_for_validation(content): ValidationLevel
-- apply_friday_mode_adjustments(): void
+- assess_business_risk(content, context): BusinessRiskAssessment
+- calculate_risk_score(transcription, amount, audio_quality): float
+- route_by_risk(risk_assessment): RoutingDecision
+- detect_critical_patterns(text): CriticalError[]
+- apply_context_adjustments(timing, amount): RiskMultiplier
 
-**Dependencies:** User Context, Time Utils, Business Rules Engine
+**Dependencies:** User Context, Time Utils, Critical Error Patterns, Audio Quality Analyzer
 
-**Technology Stack:** Python, Django business logic, time-based scheduling
+**Technology Stack:** Python, Django business logic, pattern matching, time-based scheduling
+
+### AudioNormalizerService
+**Responsibility:** Audio quality enhancement and normalization for improved transcription accuracy
+
+**Key Interfaces:**
+- normalize_audio(audio_blob): NormalizedAudioBlob
+- analyze_audio_quality(audio_blob): AudioQualityMetrics
+- convert_to_optimal_format(): OptimizedAudioFile
+- calculate_audio_score(metrics): QualityScore
+
+**Dependencies:** Web Audio API, Browser Audio Context, File Processing Utils
+
+**Technology Stack:** TypeScript, Web Audio API, Browser APIs, Audio processing libraries
 
 ### InputRecoveryService
 **Responsibility:** Backup and recover user inputs to prevent data loss
