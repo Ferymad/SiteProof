@@ -1,7 +1,24 @@
+// EMERGENCY SECURITY CHECK: Ensure this service runs server-side ONLY
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY VIOLATION: transcription-fixer contains OpenAI dependencies and must run server-side only. ' +
+    'Components should use fetch() calls to API endpoints instead of importing this service directly.'
+  );
+}
+
 import openai, { GPT_CONFIG } from '../openai';
 
 /**
+ * EMERGENCY FIX: Server-Side Transcription Fixer with OpenAI Guards
+ * 
  * Story 1A.2.1 Refactored: Generalizable Irish Construction Transcription Fixer
+ * 
+ * CRITICAL SECURITY ARCHITECTURE:
+ * - This service contains OpenAI client and MUST run server-side only
+ * - Components should NEVER import this service directly
+ * - Use fetch() calls to /api/processing/* endpoints instead
+ * - Browser execution will throw security violation error
+ * 
  * Applies tiered pattern corrections with pattern effectiveness tracking
  * Reduces over-fitting to specific test cases while maintaining accuracy
  */
@@ -349,7 +366,8 @@ export function applyPatternFixes(text: string, confidence?: number): {
   console.log('🎯 Applying contextual patterns (Tier 2)...');
   Object.entries(CONTEXTUAL_PATTERNS).forEach(([category, patterns]) => {
     patterns.forEach((patternConfig) => {
-      const { pattern, replacement, contextRequired, description } = patternConfig;
+      const { pattern, replacement, description } = patternConfig;
+      const contextRequired = 'contextRequired' in patternConfig ? patternConfig.contextRequired : undefined;
       const beforeFix = fixed;
       
       // Check if required context is present
@@ -436,7 +454,9 @@ export function applyPatternFixes(text: string, confidence?: number): {
   // Step 4: Detect critical error patterns for business risk assessment
   console.log('🚨 Checking critical error patterns...');
   Object.entries(CRITICAL_ERROR_PATTERNS).forEach(([category, patterns]) => {
-    patterns.forEach(({ pattern, replacement, critical, reason }) => {
+    patterns.forEach((errorPattern) => {
+      const { pattern, critical, reason } = errorPattern;
+      const replacement = 'replacement' in errorPattern ? errorPattern.replacement : undefined;
       const matches = fixed.match(pattern);
       if (matches) {
         if (critical) {

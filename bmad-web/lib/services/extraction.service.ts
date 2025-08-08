@@ -1,6 +1,22 @@
+// EMERGENCY SECURITY CHECK: Ensure this service runs server-side ONLY
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY VIOLATION: ExtractionService contains OpenAI dependencies and must run server-side only. ' +
+    'Components should use fetch() calls to API endpoints instead of importing this service directly.'
+  );
+}
+
 /**
+ * EMERGENCY FIX: Server-Side Data Extraction Service
+ * 
  * Story 1A.2: Data Extraction Service
  * SiteProof - Construction Evidence Machine
+ * 
+ * CRITICAL SECURITY ARCHITECTURE:
+ * - This service contains OpenAI dependencies and MUST run server-side only
+ * - Components should NEVER import this service directly
+ * - Use fetch() calls to /api/processing/* endpoints instead
+ * - Browser execution will throw security violation error
  * 
  * Business logic for extracting structured data from transcriptions
  * Using GPT-4 with construction-specific prompting

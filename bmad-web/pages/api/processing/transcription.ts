@@ -1,14 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+// EMERGENCY SECURITY FIX: OpenAI services ONLY on server-side
+// These imports are SAFE here because this is an API route (server-side)
+// NEVER import these in components - they contain OpenAI client code
 import { TranscriptionService } from '@/lib/services/transcription.service';
 import { smartSuggestionService } from '@/lib/services/smart-suggestion.service';
 import { supabase } from '@/lib/supabase';
 
 /**
+ * EMERGENCY FIX: Server-side OpenAI Transcription Endpoint
+ * 
  * Story 1A.2.1: Enhanced AI Processing Pipeline - Transcription Endpoint
  * SiteProof - Construction Evidence Machine
  * 
+ * CRITICAL SECURITY ARCHITECTURE:
+ * - All OpenAI client usage confined to server-side API routes
+ * - Components communicate via fetch() calls ONLY
+ * - Services with OpenAI dependencies are server-side ONLY
+ * 
+ * This endpoint resolves the browser security violation:
+ * "Error: It looks like you're running in a browser-like environment"
+ * 
  * Handles voice note transcription with business risk routing and critical error detection
- * Structured for easy migration to Django: /api/processing/transcribe/
+ * Includes Story 1A.2.2 smart suggestion generation
  * 
  * Future Django equivalent:
  * class TranscriptionView(APIView):
@@ -53,7 +66,9 @@ export default async function handler(
       });
     }
     
-    // Process transcription
+    console.log('🔒 SECURE SERVER-SIDE PROCESSING: Transcription request validated');
+    
+    // Process transcription using OpenAI (server-side ONLY)
     const service = new TranscriptionService();
     const result = await service.processVoiceNote({
       fileUrl: file_url,
@@ -76,6 +91,7 @@ export default async function handler(
     let smartSuggestions: any[] = [];
     let suggestionAnalysis: any = undefined;
     try {
+      console.log('🧠 SECURE SERVER-SIDE: Generating smart suggestions...');
       suggestionAnalysis = await smartSuggestionService.generateSuggestions({
         text: result.transcription || '',
         confidence: result.confidence_score,
@@ -117,6 +133,8 @@ export default async function handler(
       httpStatus = 202; // Accepted but requires suggestion review
     }
     
+    console.log('🔒 SECURE RESPONSE: All OpenAI processing completed server-side');
+    
     return res.status(httpStatus).json({
       transcription: result.transcription,
       confidence_score: result.confidence_score,
@@ -150,7 +168,7 @@ export default async function handler(
     });
     
   } catch (error: any) {
-    console.error('Transcription endpoint error:', error);
+    console.error('SECURE TRANSCRIPTION ENDPOINT ERROR:', error);
     return res.status(500).json({
       detail: error.message || 'Internal server error',
       status: 'error'

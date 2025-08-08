@@ -1,7 +1,26 @@
 import OpenAI from 'openai';
 
+// EMERGENCY SECURITY CHECK: Prevent OpenAI client from running in browser
+if (typeof window !== 'undefined') {
+  throw new Error(
+    '🚨 CRITICAL SECURITY VIOLATION: OpenAI client detected in browser environment! 🚨\n\n' +
+    'This is the root cause of the "browser-like environment" error.\n\n' +
+    'SOLUTION:\n' +
+    '1. NEVER import OpenAI services in components\n' +
+    '2. Use fetch() calls to /api/processing/* endpoints\n' +
+    '3. Keep ALL OpenAI logic server-side only\n\n' +
+    'Import chain violation detected. Check your imports!'
+  );
+}
+
 /**
- * OpenAI Configuration for SiteProof
+ * EMERGENCY FIX: Server-Side OpenAI Configuration for SiteProof
+ * 
+ * CRITICAL SECURITY ARCHITECTURE:
+ * - This module contains OpenAI client and MUST run server-side only
+ * - Components should NEVER import this module or services that use it
+ * - Browser execution will throw security violation error above
+ * 
  * Handles Whisper transcription and GPT-4 extraction
  */
 

@@ -1,6 +1,22 @@
+// EMERGENCY SECURITY CHECK: Ensure this service runs server-side ONLY
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY VIOLATION: TranscriptionService contains OpenAI dependencies and must run server-side only. ' +
+    'Components should use fetch() calls to API endpoints instead of importing this service directly.'
+  );
+}
+
 /**
+ * EMERGENCY FIX: Server-Side Transcription Service
+ * 
  * Story 1A.2.1: Enhanced Transcription Service with Business Risk Routing
  * SiteProof - Construction Evidence Machine
+ * 
+ * CRITICAL SECURITY ARCHITECTURE:
+ * - This service contains OpenAI dependencies and MUST run server-side only
+ * - Components should NEVER import this service directly
+ * - Use fetch() calls to /api/processing/* endpoints instead
+ * - Browser execution will throw security violation error
  * 
  * Implements audio normalization, business risk routing, and hallucination guards
  * Designed to be easily portable to Django
