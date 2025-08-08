@@ -133,3 +133,6 @@ packages/*/dist/
 packages/*/build/
 workspaces/*/dist/
 workspaces/*/build/
+
+# Local Claude settings (keep local)
+.claude/settings.local.json
