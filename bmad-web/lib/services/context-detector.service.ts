@@ -95,7 +95,7 @@ export class ContextDetectorService {
 
       // Use GPT-5-nano for efficient context detection
       const response = await openai.chat.completions.create({
-        model: 'gpt-5-nano', // Optimized for fast, cost-effective context detection
+        model: 'gpt-5-nano-2025-08-07', // GPT-5 nano model for fast context detection
         messages: [
           {
             role: 'system',
@@ -106,8 +106,8 @@ export class ContextDetectorService {
             content: `Analyze this Irish construction site transcription and determine the conversation context:\n\n"${request.transcription}"`
           }
         ],
-        temperature: 0.1, // Low temperature for consistent classification
-        max_tokens: 300,
+        // temperature: 1.0 (default for GPT-5, explicit setting not supported)
+        max_completion_tokens: 300,
         response_format: { type: 'json_object' }
       });
 

@@ -189,6 +189,23 @@ export class ContextDisambiguatorService {
       }
     },
     
+    // Safety terminology errors
+    {
+      pattern: /\b(safe\s+farming|engine\s+protection)\b/gi,
+      contexts: {
+        [ContextType.SAFETY_REPORT]: {
+          interpretation: 'likely "safe working" or "edge protection"',
+          confidence: 80,
+          requiresReview: true
+        },
+        [ContextType.GENERAL]: {
+          interpretation: 'likely safety terminology correction needed',
+          confidence: 70,
+          requiresReview: true
+        }
+      }
+    },
+    
     // Concrete grade formats
     {
       pattern: /\bc(\d+)\s*\/?\s*(\d+)\b/gi,
@@ -327,7 +344,7 @@ export class ContextDisambiguatorService {
     const contextHints = this.getContextSpecificHints(request.contextType);
     
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini', // Optimized for smart disambiguation with better reasoning
+      model: 'gpt-5-mini-2025-08-07', // GPT-5 mini model for smart disambiguation
       messages: [
         {
           role: 'system',
@@ -338,8 +355,8 @@ export class ContextDisambiguatorService {
           content: this.buildDisambiguationRequest(request.transcription, ambiguousTerms, request.contextType)
         }
       ],
-      temperature: 0.1, // Low temperature for consistent interpretation
-      max_tokens: 800,
+      // temperature: 1.0 (default for GPT-5, explicit setting not supported)
+      max_completion_tokens: 800,
       response_format: { type: 'json_object' }
     });
 
@@ -367,7 +384,8 @@ Key Rules:
    - Time tracking: likely clock times, suggest full time format
 4. Construction terms: 
    - "engine protection" → "edge protection"
-   - "ground forest lab" → "ground floor slab" 
+   - "ground forest lab" → "ground floor slab"
+   - "safe farming" → "safe working" 
    - "c2530" → "C25/30" (concrete grade)
 5. Numbers without units in material contexts need unit specification
 6. Be conservative - only suggest changes you're confident about

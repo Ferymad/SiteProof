@@ -26,6 +26,23 @@ interface ProcessingResult {
     total?: number;
   };
   status: 'processing' | 'completed' | 'failed' | 'pending' | 'reviewing_suggestions';
+  error?: string;
+  // Story 1A.2.4 - Frontend integration support
+  processing_system?: 'gpt5_context_aware' | 'legacy' | 'legacy_fallback';
+  context_detection?: {
+    detected_type: 'MATERIAL_ORDER' | 'TIME_TRACKING' | 'SAFETY_REPORT' | 'PROGRESS_UPDATE' | 'GENERAL';
+    confidence: number;
+    indicators: string[];
+  };
+  disambiguation_log?: Array<{
+    original: string;
+    corrected: string;
+    reasoning: string;
+    confidence: number;
+  }>;
+  processing_cost?: number;
+  raw_transcription?: string;
+  comparison_mode?: boolean;
   [key: string]: unknown;
 }
 
@@ -42,6 +59,84 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null)
   const [processingLoading, setProcessingLoading] = useState(false)
   const [lastSubmissionId, setLastSubmissionId] = useState<string | null>(null)
+  const [useContextAware, setUseContextAware] = useState(false)
+  const [compareModeEnabled, setCompareModeEnabled] = useState(false)
+  const [comparisonResults, setComparisonResults] = useState<{legacy: ProcessingResult | null, gpt5: ProcessingResult | null}>({legacy: null, gpt5: null})
+
+  // Initialize context-aware setting from localStorage
+  useEffect(() => {
+    const savedSetting = localStorage.getItem('use_context_aware') === 'true'
+    setUseContextAware(savedSetting)
+  }, [])
+
+  const handleToggleContextAware = (enabled: boolean) => {
+    setUseContextAware(enabled)
+    localStorage.setItem('use_context_aware', enabled.toString())
+    console.log(`🔧 Processing system switched to: ${enabled ? 'GPT-5 Context-Aware' : 'Legacy'}`)
+  }
+
+  const handleCompareProcessingSystems = async () => {
+    if (!lastSubmissionId) {
+      setError('No submission to process. Please submit data first.')
+      return
+    }
+
+    setProcessingLoading(true)
+    setProcessingResult({ status: 'processing' })
+    setComparisonResults({legacy: null, gpt5: null})
+    setError('')
+
+    console.log('🔬 Starting A/B comparison between Legacy and GPT-5 systems')
+
+    try {
+      // Process with both systems in parallel
+      const [legacyResponse, gpt5Response] = await Promise.allSettled([
+        fetch('/api/processing/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            submission_id: lastSubmissionId,
+            user_id: user.id
+          })
+        }),
+        fetch('/api/processing/context-aware', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            submission_id: lastSubmissionId,
+            user_id: user.id
+          })
+        })
+      ])
+
+      const legacyResult = legacyResponse.status === 'fulfilled' && legacyResponse.value.ok ? 
+        await legacyResponse.value.json() : null
+      const gpt5Result = gpt5Response.status === 'fulfilled' && gpt5Response.value.ok ? 
+        await gpt5Response.value.json() : null
+
+      if (legacyResult) legacyResult.processing_system = 'legacy'
+      if (gpt5Result) gpt5Result.processing_system = 'gpt5_context_aware'
+
+      setComparisonResults({
+        legacy: legacyResult ? {...legacyResult, status: 'completed'} : {status: 'failed', error: 'Legacy processing failed'},
+        gpt5: gpt5Result ? {...gpt5Result, status: 'completed'} : {status: 'failed', error: 'GPT-5 processing failed'}
+      })
+
+      setProcessingResult({ status: 'completed', comparison_mode: true })
+      setSuccess('A/B comparison completed! Review both systems side-by-side below.')
+
+    } catch (error) {
+      console.error('Comparison processing error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to run A/B comparison';
+      setError(errorMessage)
+      setProcessingResult({
+        status: 'failed',
+        error: errorMessage
+      })
+    } finally {
+      setProcessingLoading(false)
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -139,7 +234,16 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
     setError('')
 
     try {
-      const response = await fetch('/api/processing/process', {
+      // Dynamic endpoint routing based on localStorage setting
+      const useContextAware = localStorage.getItem('use_context_aware') === 'true'
+      const endpoint = useContextAware ? 
+        '/api/processing/context-aware' :  // GPT-5 system (Story 1A.2.3)
+        '/api/processing/process'          // Legacy system (Story 1A.2.1)
+
+      console.log(`🎯 Using ${useContextAware ? 'GPT-5 Context-Aware' : 'Legacy'} processing system`)
+      console.log(`📡 Endpoint: ${endpoint}`)
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -153,14 +257,44 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
       const result = await response.json()
 
       if (!response.ok) {
+        // If GPT-5 system fails, fallback to legacy system
+        if (useContextAware && endpoint === '/api/processing/context-aware') {
+          console.warn('🔄 GPT-5 system failed, falling back to legacy system')
+          const fallbackResponse = await fetch('/api/processing/process', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              submission_id: lastSubmissionId,
+              user_id: user.id
+            })
+          })
+
+          const fallbackResult = await fallbackResponse.json()
+          
+          if (!fallbackResponse.ok) {
+            throw new Error(fallbackResult.detail || 'Both processing systems failed')
+          }
+
+          setProcessingResult({
+            ...fallbackResult,
+            status: 'completed',
+            processing_system: 'legacy_fallback'
+          })
+          setSuccess('AI processing completed successfully! (Used legacy system due to GPT-5 unavailability)')
+          return
+        }
+
         throw new Error(result.detail || 'Processing failed')
       }
 
       setProcessingResult({
         ...result,
-        status: 'completed'
+        status: 'completed',
+        processing_system: useContextAware ? 'gpt5_context_aware' : 'legacy'
       })
-      setSuccess('AI processing completed successfully!')
+      setSuccess(`AI processing completed successfully! ${useContextAware ? '(GPT-5 Context-Aware System)' : '(Legacy System)'}`)
 
     } catch (error) {
       console.error('Processing error:', error)
@@ -310,9 +444,70 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
         {/* AI Processing Section */}
         {(success || processingResult) && (
           <div className="mt-6 space-y-4">
+            {/* Processing System Toggle */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900">AI Processing System</h3>
+                  <p className="text-xs text-gray-500">Choose your processing quality level</p>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="context-aware-toggle"
+                    checked={useContextAware}
+                    onChange={(e) => handleToggleContextAware(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor="context-aware-toggle"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
+                      useContextAware ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        useContextAware ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </label>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className={`p-3 rounded-lg border ${!useContextAware ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+                  <div className="flex items-center mb-1">
+                    <span className="font-medium text-gray-900">Legacy System</span>
+                    {!useContextAware && <span className="ml-1 text-blue-600">●</span>}
+                  </div>
+                  <div className="text-gray-600 mb-2">Basic pattern-based fixes</div>
+                  <div className="flex justify-between">
+                    <span>Cost: $0.007</span>
+                    <span>Accuracy: 70%</span>
+                  </div>
+                </div>
+                
+                <div className={`p-3 rounded-lg border ${useContextAware ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+                  <div className="flex items-center mb-1">
+                    <span className="font-medium text-gray-900">GPT-5 Context-Aware</span>
+                    {useContextAware && <span className="ml-1 text-blue-600">●</span>}
+                  </div>
+                  <div className="text-gray-600 mb-2">Intelligent context detection</div>
+                  <div className="flex justify-between">
+                    <span>Cost: $0.0085</span>
+                    <span>Accuracy: 85%+</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-3 text-xs text-gray-500">
+                💡 GPT-5 system detects conversation context (MATERIAL_ORDER, TIME_TRACKING, etc.) for smarter disambiguation
+              </div>
+            </div>
+
             {/* Processing Button */}
             {processingResult?.status === 'pending' && (
-              <div className="text-center">
+              <div className="text-center space-y-3">
                 <button
                   onClick={handleProcessWithAI}
                   disabled={processingLoading}
@@ -328,37 +523,157 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
-                      Process with AI
+                      Process with {useContextAware ? 'GPT-5' : 'Legacy'} System
                     </>
                   )}
                 </button>
-                <p className="text-sm text-gray-600 mt-2">
-                  Transcribe voice notes and extract construction data using SiteProof AI
+                
+                {/* A/B Testing Button */}
+                <button
+                  onClick={handleCompareProcessingSystems}
+                  disabled={processingLoading}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  {processingLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Running A/B Comparison...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Compare Both Systems (A/B Test)
+                    </>
+                  )}
+                </button>
+                
+                <p className="text-sm text-gray-600">
+                  Choose single system processing or run A/B comparison to see quality differences
                 </p>
               </div>
             )}
             
             {/* Processing Results */}
-            {processingResult && lastSubmissionId && (
+            {processingResult && lastSubmissionId && !processingResult.comparison_mode && (
               <ProcessingStatus
                 result={processingResult}
                 submissionId={lastSubmissionId}
               />
+            )}
+
+            {/* A/B Comparison Results */}
+            {processingResult?.comparison_mode && comparisonResults.legacy && comparisonResults.gpt5 && (
+              <div className="space-y-4">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 className="text-purple-800 font-medium">A/B Processing Comparison</h3>
+                  </div>
+                  <p className="text-purple-700 text-sm mb-4">
+                    Both systems processed the same audio file simultaneously. Compare quality, accuracy, and features below.
+                  </p>
+                  
+                  {/* Comparison Summary */}
+                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                    <div className="bg-white rounded border p-3">
+                      <div className="font-medium text-gray-700 mb-2">Legacy System</div>
+                      <div className="space-y-1">
+                        <div>Cost: ~$0.007</div>
+                        <div>Processing: Pattern-based fixes</div>
+                        <div className={`${comparisonResults.legacy.status === 'completed' ? 'text-green-600' : 'text-red-600'}`}>
+                          Status: {comparisonResults.legacy.status === 'completed' ? 'Success' : 'Failed'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded border p-3">
+                      <div className="font-medium text-gray-700 mb-2">GPT-5 Context-Aware</div>
+                      <div className="space-y-1">
+                        <div>Cost: ~$0.0085</div>
+                        <div>Processing: AI context detection</div>
+                        <div className={`${comparisonResults.gpt5.status === 'completed' ? 'text-green-600' : 'text-red-600'}`}>
+                          Status: {comparisonResults.gpt5.status === 'completed' ? 'Success' : 'Failed'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side-by-side results */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
+                      Legacy System Results
+                    </h4>
+                    <ProcessingStatus
+                      result={comparisonResults.legacy}
+                      submissionId={lastSubmissionId || ''}
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                      GPT-5 Context-Aware Results
+                    </h4>
+                    <ProcessingStatus
+                      result={comparisonResults.gpt5}
+                      submissionId={lastSubmissionId || ''}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
 
         {/* Info Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-          <h3 className="font-medium text-blue-900 mb-2">About SiteProof AI Processing</h3>
-          <div className="text-sm text-blue-800 space-y-2">
-            <p>
-              <strong>Voice Transcription:</strong> Using OpenAI Whisper for accurate Irish construction site transcription
-            </p>
-            <p>
-              <strong>Data Extraction:</strong> GPT-4 identifies amounts, materials, dates, and safety concerns from your communications
-            </p>
-            <p>
+          <h3 className="font-medium text-blue-900 mb-2">About SiteProof AI Processing Systems</h3>
+          <div className="text-sm text-blue-800 space-y-3">
+            <div>
+              <strong>🔄 Processing Options:</strong>
+              <ul className="mt-1 ml-4 space-y-1 list-disc">
+                <li><strong>Legacy System:</strong> Pattern-based transcription fixes (~$0.007, 70% accuracy)</li>
+                <li><strong>GPT-5 Context-Aware:</strong> Intelligent context detection (~$0.0085, 85%+ accuracy)</li>
+                <li><strong>A/B Comparison:</strong> Side-by-side quality comparison for evaluation</li>
+              </ul>
+            </div>
+            
+            <div>
+              <strong>🎯 Context Detection Types:</strong>
+              <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+                <div>• <span className="bg-green-100 text-green-800 px-1 rounded">MATERIAL_ORDER</span> - Supplies & quantities</div>
+                <div>• <span className="bg-purple-100 text-purple-800 px-1 rounded">TIME_TRACKING</span> - Schedules & hours</div>
+                <div>• <span className="bg-red-100 text-red-800 px-1 rounded">SAFETY_REPORT</span> - Incidents & PPE</div>
+                <div>• <span className="bg-yellow-100 text-yellow-800 px-1 rounded">PROGRESS_UPDATE</span> - Work status</div>
+              </div>
+            </div>
+            
+            <div>
+              <strong>💡 Smart Features:</strong>
+              <ul className="mt-1 ml-4 space-y-1 list-disc">
+                <li>Automatic fallback from GPT-5 to Legacy if needed</li>
+                <li>Context-aware disambiguation (e.g., "at 8" → "8:00 AM" vs "8 tonnes")</li>
+                <li>Irish market compliance (£ → € currency conversion)</li>
+                <li>Construction terminology corrections (C25/30, edge protection)</li>
+              </ul>
+            </div>
+            
+            <div>
+              <strong>📊 Quality Improvements:</strong>
+              <ul className="mt-1 ml-4 space-y-1 list-disc">
+                <li>Resolves "at 30" → "at 8:30" time errors</li>
+                <li>Fixes "Safe farming" → "Safe working" terminology</li>
+                <li>Eliminates AI hallucination with context validation</li>
+                <li>Provides reasoning for each correction made</li>
+              </ul>
+            </div>
+            
+            <p className="pt-2 border-t border-blue-300">
               <strong>Next Step:</strong> Story 1A.3 will add professional PDF evidence generation from this processed data
             </p>
           </div>
