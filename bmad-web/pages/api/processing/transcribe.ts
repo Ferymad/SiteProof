@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { TranscriptionService } from '@/lib/services/transcription.service';
-import { smartSuggestionService } from '@/lib/services/smart-suggestion.service';
+import { smartSuggestionService, SuggestionAnalysis } from '@/lib/services/smart-suggestion.service';
+import { SmartSuggestion } from '@/components/SmartSuggestionReview';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -73,8 +74,8 @@ export default async function handler(
     }
     
     // Story 1A.2.2: Generate smart suggestions for transcription improvements
-    let smartSuggestions: any[] = [];
-    let suggestionAnalysis: any = undefined;
+    let smartSuggestions: SmartSuggestion[] = [];
+    let suggestionAnalysis: SuggestionAnalysis | undefined = undefined;
     try {
       suggestionAnalysis = await smartSuggestionService.generateSuggestions({
         text: result.transcription || '',
@@ -97,6 +98,7 @@ export default async function handler(
       // Don't fail the entire request if suggestions fail
       smartSuggestions = [];
       suggestionAnalysis = {
+        suggestions: [],
         totalRiskScore: 0,
         requiresReview: false,
         estimatedReviewTime: 10,
@@ -149,10 +151,11 @@ export default async function handler(
       } : undefined
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Transcription endpoint error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return res.status(500).json({
-      detail: error.message || 'Internal server error',
+      detail: errorMessage || 'Internal server error',
       status: 'error'
     });
   }

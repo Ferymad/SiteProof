@@ -2,8 +2,35 @@ import { useState, useEffect } from 'react'
 import { supabase, uploadVoiceNote } from '@/lib/supabase'
 import ProcessingStatus from './ProcessingStatus'
 
+interface User {
+  id: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+interface ProcessingResult {
+  transcription?: string;
+  transcription_confidence?: number;
+  extracted_data?: {
+    amounts: string[];
+    materials: string[];
+    dates: string[];
+    safety_concerns: string[];
+    work_status: string | null;
+  };
+  extraction_confidence?: number;
+  combined_confidence?: number;
+  processing_time?: {
+    transcription?: number;
+    extraction?: number;
+    total?: number;
+  };
+  status: 'processing' | 'completed' | 'failed' | 'pending' | 'reviewing_suggestions';
+  [key: string]: unknown;
+}
+
 interface WhatsAppFormProps {
-  user: any
+  user: User;
 }
 
 export default function WhatsAppForm({ user }: WhatsAppFormProps) {
@@ -12,7 +39,7 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
-  const [processingResult, setProcessingResult] = useState<any>(null)
+  const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null)
   const [processingLoading, setProcessingLoading] = useState(false)
   const [lastSubmissionId, setLastSubmissionId] = useState<string | null>(null)
 
@@ -87,9 +114,10 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
       const fileInput = document.getElementById('voice-file') as HTMLInputElement
       if (fileInput) fileInput.value = ''
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Submission error:', error)
-      setError(error.message || 'Failed to submit data')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit data';
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -134,12 +162,13 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
       })
       setSuccess('AI processing completed successfully!')
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Processing error:', error)
-      setError(error.message || 'Failed to process with AI')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process with AI';
+      setError(errorMessage)
       setProcessingResult({
         status: 'failed',
-        error: error.message || 'Processing failed'
+        error: errorMessage
       })
     } finally {
       setProcessingLoading(false)

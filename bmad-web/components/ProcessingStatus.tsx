@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 // EMERGENCY SECURITY FIX: Components NEVER import services with OpenAI
 // All AI processing happens server-side via API calls
-import { ConfidenceBadge, ConstructionConfidenceDisplay } from './ConfidenceBadge';
+import { ConstructionConfidenceDisplay } from './ConfidenceBadge';
 import { SmartSuggestionReview, SmartSuggestion } from './SmartSuggestionReview';
 
 // SECURITY VALIDATION: This component uses ONLY:
@@ -346,7 +346,7 @@ export function ProcessingStatus({ result, submissionId }: ProcessingStatusProps
 
         {/* Next Steps */}
         <div className="bg-blue-50 border border-blue-200 rounded p-3">
-          <h4 className="text-blue-800 font-medium mb-2">What's Next?</h4>
+          <h4 className="text-blue-800 font-medium mb-2">What&apos;s Next?</h4>
           <p className="text-blue-700 text-sm">
             This processed data is now ready for PDF evidence generation (Story 1A.3). 
             The extracted information can be used to create professional construction evidence packages.
@@ -366,7 +366,7 @@ export function ProcessingStatus({ result, submissionId }: ProcessingStatusProps
         <div>
           <h3 className="text-gray-700 font-medium">Ready for Processing</h3>
           <p className="text-gray-600 text-sm mt-1">
-            Click "Process with AI" to begin transcription and data extraction
+            Click &quot;Process with AI&quot; to begin transcription and data extraction
           </p>
         </div>
       </div>
