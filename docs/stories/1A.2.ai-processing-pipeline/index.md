@@ -1,0 +1,26 @@
+# Story 1A.2: AI Processing Pipeline
+
+## Table of Contents
+
+- [Story 1A.2: AI Processing Pipeline](#table-of-contents)
+  - [Status](#status)
+  - [Story](#story)
+  - [Acceptance Criteria](#acceptance-criteria)
+  - [Tasks / Subtasks](#tasks-subtasks)
+  - [Dev Notes](#dev-notes)
+  - [Change Log](#change-log)
+  - [Dev Agent Record](#dev-agent-record)
+  - [QA Results](#qa-results)
+  - [Story 1A.2.1: Critical Fix - Irish Construction Transcription Accuracy ✅ RESOLVED](#story-1a21-critical-fix-irish-construction-transcription-accuracy-resolved)
+  - [Story 1A.2.1.1: Pattern Generalization Enhancement](#story-1a211-pattern-generalization-enhancement)
+  - [Story 1A.2.2: Interactive Unit Disambiguation Layer ✅ PRODUCTION READY](#story-1a22-interactive-unit-disambiguation-layer-production-ready)
+  - [Story 1A.2.3: GPT-5 Context-Aware Processing Engine ✅ COMPLETED](#story-1a23-gpt-5-context-aware-processing-engine-completed)
+  - [Story 1A.2.4: Frontend Integration - Connect UI to GPT-5 Context-Aware System ✅ COMPLETED](#story-1a24-frontend-integration-connect-ui-to-gpt-5-context-aware-system-completed)
+  - [QA Results - Story 1A.2.4 Frontend Integration](#qa-results-story-1a24-frontend-integration)
+  - [Story 1A.2.5: Fix GPT-5 API Endpoint HTTP 400 Error ✅ COMPLETED](#story-1a25-fix-gpt-5-api-endpoint-http-400-error-completed)
+  - [QA Results - Story 1A.2.5 HTTP 400 Error Fix](#qa-results-story-1a25-http-400-error-fix)
+  - [Story 1A.2.6: Fix Database Schema - Add Missing voice_file_url Column ✅ COMPLETED](#story-1a26-fix-database-schema-add-missing-voicefileurl-column-completed)
+  - [QA Results - Story 1A.2.6 Database Schema Fix](#qa-results-story-1a26-database-schema-fix)
+  - [Story 1A.2.7: Fix GPT-5 Results Display & API Parameters 🎯 DRAFTED](#story-1a27-fix-gpt-5-results-display-api-parameters-drafted)
+  - [Story 1A.2.8: Fix Critical GPT-5 System Failures 🚨 DRAFTED](#story-1a28-fix-critical-gpt-5-system-failures-drafted)
+  - [Story 1A.2.9: Fix Core Transcription Issues - Final MVP Push 🚨 CRITICAL](#story-1a29-fix-core-transcription-issues-final-mvp-push-critical)
