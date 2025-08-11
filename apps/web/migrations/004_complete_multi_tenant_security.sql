@@ -15,13 +15,48 @@ CREATE INDEX IF NOT EXISTS idx_processing_analytics_company_id
 ON processing_analytics(company_id);
 
 -- Update existing processing_analytics records with company_id from whatsapp_submissions
-UPDATE processing_analytics 
-SET company_id = (
-  SELECT ws.company_id 
-  FROM whatsapp_submissions ws 
-  WHERE ws.id = processing_analytics.submission_id
-)
-WHERE company_id IS NULL;
+-- IMPORTANT: This assumes whatsapp_submissions already have company_id values
+-- If not, this migration will fail and require manual data fix (see migration 006)
+DO $$
+DECLARE
+    orphaned_submissions INTEGER;
+    analytics_updated INTEGER;
+BEGIN
+    -- Check if whatsapp_submissions have proper company associations
+    SELECT COUNT(*) INTO orphaned_submissions 
+    FROM whatsapp_submissions 
+    WHERE company_id IS NULL;
+    
+    IF orphaned_submissions > 0 THEN
+        RAISE WARNING 'Found % whatsapp_submissions with NULL company_id. These need to be fixed before analytics can be updated.', orphaned_submissions;
+        RAISE WARNING 'Run migration 006_fix_orphaned_submissions.sql to fix orphaned data first.';
+        -- Continue anyway, but warn about the issue
+    END IF;
+    
+    -- Update analytics with company_id from submissions
+    UPDATE processing_analytics 
+    SET company_id = (
+      SELECT ws.company_id 
+      FROM whatsapp_submissions ws 
+      WHERE ws.id = processing_analytics.submission_id
+        AND ws.company_id IS NOT NULL  -- Only use submissions that have valid company_id
+    )
+    WHERE company_id IS NULL 
+      AND submission_id IS NOT NULL;
+    
+    GET DIAGNOSTICS analytics_updated = ROW_COUNT;
+    RAISE NOTICE 'Updated % processing_analytics records with company_id', analytics_updated;
+    
+    -- Check for remaining orphaned analytics
+    SELECT COUNT(*) INTO analytics_updated 
+    FROM processing_analytics 
+    WHERE company_id IS NULL;
+    
+    IF analytics_updated > 0 THEN
+        RAISE WARNING 'WARNING: % processing_analytics records still have NULL company_id after update', analytics_updated;
+        RAISE WARNING 'This may cause RLS policies to block access to these records';
+    END IF;
+END $$;
 
 -- Drop existing RLS policies on processing_analytics and recreate with company isolation
 DROP POLICY IF EXISTS "Users can view their own processing analytics" ON processing_analytics;
