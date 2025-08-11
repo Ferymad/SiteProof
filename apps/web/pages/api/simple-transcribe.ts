@@ -99,11 +99,11 @@ export default async function handler(
       metadata: { confidence: result.confidence, duration: result.duration },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Transcription endpoint error:', error);
     return res.status(500).json({
       error: 'Transcription failed',
-      details: error.message,
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }

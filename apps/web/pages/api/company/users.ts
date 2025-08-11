@@ -139,16 +139,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(405).json({ error: 'Method not allowed' })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Company users API error:', error)
     
     // Handle permission and auth errors gracefully
-    if (error.message.includes('Authentication required')) {
+    if (error instanceof Error && error.message.includes('Authentication required')) {
       const authError = createAuthErrorResponse(error.message)
       return res.status(authError.status).json(authError)
     }
     
-    if (error.message.includes('Insufficient permissions')) {
+    if (error instanceof Error && error.message.includes('Insufficient permissions')) {
       const permError = createPermissionErrorResponse(error.message)
       return res.status(permError.status).json(permError)
     }

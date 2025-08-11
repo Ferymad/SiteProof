@@ -31,6 +31,7 @@ interface TestUser {
 describe('Multi-Tenant Security Isolation', () => {
   let testCompanies: TestCompany[] = []
   let testUsers: TestUser[] = []
+  let testSubmissions: any[] = []
 
   beforeAll(async () => {
     // Create test companies
@@ -228,8 +229,6 @@ describe('Multi-Tenant Security Isolation', () => {
   })
 
   describe('WhatsApp Submissions Isolation', () => {
-    let testSubmissions: any[] = []
-
     beforeAll(async () => {
       // Create test submissions for each user
       const submissionsToCreate = [

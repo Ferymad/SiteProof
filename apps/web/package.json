@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@sentry/nextjs": "^8.30.0",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-ui-react": "^0.4.7",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.45.0",
     "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.10",
@@ -29,6 +29,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.6.1",

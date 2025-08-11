@@ -1,46 +1,62 @@
-import { createClient, AuthError, AuthResponse } from '@supabase/supabase-js'
+import { supabase } from './supabase-client'
 import type { Database } from '../types/database'
 
-// Environment variables with validation
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Re-export the client for backward compatibility
+export { supabase }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-// Create Supabase client with enhanced configuration
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce'
-  }
-})
-
-// Enhanced authentication utilities
+// Simplified authentication service using SSR-compatible client
 export const authService = {
-  // Get current user with company data
+  // Get current user (simplified to prevent circular dependencies)
   getCurrentUser: async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) return { user: null, company: null, profile: null, error }
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        return { user: null, company: null, profile: null, error }
+      }
 
-    // Get user profile with company information
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select(`
-        *,
-        company:companies(*)
-      `)
-      .eq('id', user.id)
-      .single()
+      // Only return user - let components fetch profile data as needed
+      return { user, profile: null, company: null, error: null }
+    } catch (error) {
+      console.error('Error getting current user:', error)
+      return { user: null, company: null, profile: null, error }
+    }
+  },
 
-    return { 
-      user, 
-      profile, 
-      company: profile?.company || null, 
-      error: profileError 
+  // Separate function to get profile data when needed
+  getUserProfile: async (userId: string) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select(`
+          id, email, name, role, company_id, preferences, created_at,
+          companies (
+            id, name, type, subscription_tier, settings, created_at, updated_at
+          )
+        `)
+        .eq('id', userId)
+        .single()
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError)
+        return { profile: null, company: null, error: profileError }
+      }
+
+      return {
+        profile: {
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          role: profile.role,
+          company_id: profile.company_id,
+          preferences: profile.preferences,
+          created_at: profile.created_at
+        },
+        company: profile.companies,
+        error: null
+      }
+    } catch (error) {
+      console.error('Error getting user profile:', error)
+      return { profile: null, company: null, error }
     }
   },
 
@@ -77,12 +93,18 @@ export const authService = {
     return { error }
   },
 
-  // Password reset
+  // Email-based password reset
   resetPassword: async (email: string) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
-    })
-    return { data, error }
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      
+      return { data, error }
+    } catch (error) {
+      console.error('Password reset error:', error)
+      return { data: null, error }
+    }
   },
 
   // Update password
@@ -99,9 +121,56 @@ export const authService = {
     return { session, error }
   },
 
-  // Listen to auth state changes
+  // Authentication state change listener
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     return supabase.auth.onAuthStateChange(callback)
+  },
+
+  // Company registration
+  registerCompany: async (companyData: any, adminUserData: any) => {
+    try {
+      // First create the admin user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: adminUserData.email,
+        password: adminUserData.password,
+      })
+
+      if (authError || !authData.user) {
+        console.error('User registration error:', authError)
+        return { data: null, error: authError }
+      }
+
+      // Then create company and user profile via API
+      const response = await fetch('/api/auth/register-company', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: companyData,
+          adminUser: { ...adminUserData, id: authData.user.id }
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('Company registration API error:', result)
+        return { data: null, error: result.error }
+      }
+
+      return {
+        data: {
+          user: authData.user,
+          session: authData.session,
+          company: result.company,
+          profile: result.user
+        },
+        error: null
+      }
+
+    } catch (error) {
+      console.error('Unexpected error during company registration:', error)
+      return { data: null, error }
+    }
   }
 }
 

@@ -45,16 +45,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...userData
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Data export error:', error)
     
-    if (error.message.includes('Authentication required')) {
-      const authError = createAuthErrorResponse(error.message)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
+    if (errorMessage.includes('Authentication required')) {
+      const authError = createAuthErrorResponse(errorMessage)
       return res.status(authError.status).json(authError)
     }
     
-    if (error.message.includes('Insufficient permissions')) {
-      const permError = createPermissionErrorResponse(error.message)
+    if (errorMessage.includes('Insufficient permissions')) {
+      const permError = createPermissionErrorResponse(errorMessage)
       return res.status(permError.status).json(permError)
     }
     

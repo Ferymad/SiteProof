@@ -82,10 +82,10 @@ export default async function handler(
       status: 'completed'
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Extraction endpoint error:', error);
     return res.status(500).json({
-      detail: error.message || 'Internal server error',
+      detail: error instanceof Error ? error.message : 'Internal server error',
       status: 'error'
     });
   }

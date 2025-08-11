@@ -116,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     return res.status(200).json(response);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Battle test API error:', error);
     
     // Return appropriate error response
@@ -125,8 +125,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp: new Date().toISOString(),
       error: {
         type: 'BATTLE_TEST_FAILED',
-        message: error.message || 'Unknown error during battle test',
-        details: error.stack ? error.stack.split('\n').slice(0, 3) : []
+        message: error instanceof Error ? (error.message || 'Unknown error during battle test') : 'Unknown error during battle test',
+        details: error instanceof Error && error.stack ? error.stack.split('\n').slice(0, 3) : []
       },
       troubleshooting: [
         'Check API keys are configured: ASSEMBLYAI_API_KEY, DEEPGRAM_API_KEY',
@@ -137,9 +137,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
     
     // Different status codes based on error type
-    if (error.message?.includes('API_KEY') || error.message?.includes('unauthorized')) {
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('API_KEY') || errorMessage.includes('unauthorized')) {
       return res.status(401).json(errorResponse);
-    } else if (error.message?.includes('timeout') || error.message?.includes('network')) {
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
       return res.status(503).json(errorResponse);
     } else {
       return res.status(500).json(errorResponse);

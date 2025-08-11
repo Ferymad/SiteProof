@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import UserRoleManagement from '@/components/UserRoleManagement'
@@ -6,13 +6,9 @@ import UserRoleManagement from '@/components/UserRoleManagement'
 export default function CompanyUsersPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [userRole, setUserRole] = useState('')
+  const [, setUserRole] = useState('')
 
-  useEffect(() => {
-    checkUserRole()
-  }, [])
-
-  const checkUserRole = async () => {
+  const checkUserRole = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
@@ -38,7 +34,11 @@ export default function CompanyUsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    checkUserRole()
+  }, [checkUserRole])
 
   if (loading) {
     return (
@@ -92,7 +92,7 @@ export default function CompanyUsersPage() {
           <div className="mt-4">
             <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
             <p className="mt-2 text-gray-600">
-              Manage your team members' roles and permissions
+              Manage your team members&apos; roles and permissions
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function CompanyUsersPage() {
                 <div className="mt-2 text-sm text-blue-700">
                   <ul className="list-disc list-inside space-y-1">
                     <li>Only admins can manage team member roles and permissions</li>
-                    <li>You cannot demote yourself if you're the only admin</li>
+                    <li>You cannot demote yourself if you&apos;re the only admin</li>
                     <li>Removed users will lose access to all company data</li>
                     <li>Role changes take effect immediately</li>
                   </ul>

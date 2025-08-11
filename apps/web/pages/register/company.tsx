@@ -5,8 +5,8 @@ export default function CompanyRegistrationPage() {
   const router = useRouter()
 
   const handleRegistrationSuccess = () => {
-    // Redirect to dashboard or login page after successful registration
-    router.push('/?registered=true')
+    // Redirect to login page with success message for better UX
+    router.push('/auth/login?message=registration_success')
   }
 
   return (

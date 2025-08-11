@@ -94,12 +94,12 @@ async function handler(
       code: 'METHOD_NOT_ALLOWED'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Security alerts API error:', error)
     return res.status(500).json({
       error: 'Internal server error',
       code: 'INTERNAL_ERROR',
-      message: error.message
+      message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 }

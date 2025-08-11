@@ -50,22 +50,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       deleted_user_id: userContext.id
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Account deletion error:', error)
     
-    if (error.message.includes('Authentication required')) {
-      const authError = createAuthErrorResponse(error.message)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
+    if (errorMessage.includes('Authentication required')) {
+      const authError = createAuthErrorResponse(errorMessage)
       return res.status(authError.status).json(authError)
     }
     
-    if (error.message.includes('Insufficient permissions')) {
-      const permError = createPermissionErrorResponse(error.message)
+    if (errorMessage.includes('Insufficient permissions')) {
+      const permError = createPermissionErrorResponse(errorMessage)
       return res.status(permError.status).json(permError)
     }
 
-    if (error.message.includes('LAST_ADMIN_PROTECTION')) {
+    if (errorMessage.includes('LAST_ADMIN_PROTECTION')) {
       return res.status(400).json({ 
-        error: error.message,
+        error: errorMessage,
         code: 'LAST_ADMIN_PROTECTION'
       })
     }

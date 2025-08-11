@@ -39,11 +39,11 @@ export default async function handler(
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Smart suggestion test error:', error);
     return res.status(500).json({
       error: 'Failed to generate suggestions',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }
 }

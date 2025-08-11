@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { authService } from '@/lib/supabase'
+import { authService, supabase } from '@/lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
 
 interface UserProfile {
@@ -54,12 +54,67 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loadUserData = async () => {
     try {
-      const { user: currentUser, profile: userProfile, company: userCompany } = await authService.getCurrentUser()
+      // First, just check if we have a user from Supabase Auth
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !currentUser) {
+        console.log('No authenticated user found:', authError)
+        setUser(null)
+        setProfile(null)
+        setCompany(null)
+        setLoading(false)
+        return
+      }
+
+      // Set user immediately - this allows UI to show authenticated state
       setUser(currentUser)
-      setProfile(userProfile)
-      setCompany(userCompany)
+
+      // Prevent circular dependencies by not loading profile on auth pages
+      const currentPath = window.location.pathname
+      const skipProfilePaths = [
+        '/auth/',
+        '/register/',
+        '/_next/',
+        '/api/'
+      ]
+      
+      const shouldSkipProfile = skipProfilePaths.some(path => currentPath.includes(path))
+      
+      if (shouldSkipProfile) {
+        // Don't try to load profile data on auth pages to prevent middleware loops
+        setProfile(null)
+        setCompany(null)
+        setLoading(false)
+        return
+      }
+
+      // Load profile data only for dashboard and protected pages
+      try {
+        const { profile, company, error: profileError } = await authService.getUserProfile(currentUser.id)
+
+        if (profileError) {
+          console.error('Error loading user profile:', profileError)
+          setProfile(null)
+          setCompany(null)
+        } else {
+          setProfile(profile)
+          // Handle company data from join query - could be array or single object
+          if (Array.isArray(company) && company.length > 0) {
+            setCompany(company[0] as Company)
+          } else if (company && !Array.isArray(company)) {
+            setCompany(company as Company)
+          } else {
+            setCompany(null)
+          }
+        }
+      } catch (profileError) {
+        console.error('Profile fetch error:', profileError)
+        setProfile(null)
+        setCompany(null)
+      }
+      
     } catch (error) {
-      console.error('Error loading user data:', error)
+      console.error('Error in loadUserData:', error)
       setUser(null)
       setProfile(null)
       setCompany(null)

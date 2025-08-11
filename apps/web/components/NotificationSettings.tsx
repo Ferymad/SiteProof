@@ -143,8 +143,8 @@ export default function NotificationSettings({ onSave }: NotificationSettingsPro
       if (userProfile?.preferences?.notifications) {
         setPreferences(userProfile.preferences.notifications)
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -184,8 +184,8 @@ export default function NotificationSettings({ onSave }: NotificationSettingsPro
       if (error) throw error
 
       onSave(preferences)
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setSaving(false)
     }

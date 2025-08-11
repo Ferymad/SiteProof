@@ -176,7 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json(response)
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Token refresh error:', error)
     return res.status(500).json({
       error: 'Internal server error',
@@ -189,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
  * Generate new access and refresh token pair
  */
 async function generateTokenPair(
-  user: any,
+  user: { id: string; email: string; company_id: string; role: string; name?: string },
   familyId: string,
   ipAddress: string | null,
   userAgent: string
@@ -359,7 +359,7 @@ async function logSecurityEvent(event: {
   event: string
   userId: string
   companyId: string
-  details: any
+  details: Record<string, unknown>
 }): Promise<void> {
   try {
     await supabaseAdmin

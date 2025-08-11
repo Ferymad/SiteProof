@@ -266,8 +266,8 @@ function AccountSettings({ profile }: { profile: UserProfile }) {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -294,8 +294,8 @@ function AccountSettings({ profile }: { profile: UserProfile }) {
 
       await supabase.auth.signOut()
       router.push('/')
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import type { CookieOptions } from '@supabase/ssr'
 
 type UserRole = 'admin' | 'pm' | 'validator' | 'viewer'
 
@@ -21,43 +22,66 @@ const ROUTE_PERMISSIONS: RoutePermissions = {
 }
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  
-  // Get token from request headers or cookies
-  const token = req.headers.get('authorization')?.replace('Bearer ', '') ||
-                req.cookies.get('sb-access-token')?.value
-
-  if (!token) {
-    const { pathname } = req.nextUrl
-    const protectedRoutes = Object.keys(ROUTE_PERMISSIONS)
-    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-    
-    if (isProtectedRoute) {
-      const redirectUrl = new URL('/auth/login', req.url)
-      redirectUrl.searchParams.set('redirectTo', pathname)
-      return NextResponse.redirect(redirectUrl)
-    }
-    
-    return res
-  }
-
-  // Create Supabase client with user token
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
+  let res = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
   })
+  
+  // Create Supabase SSR client
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          // Handle cookie setting for requests
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          res.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          // Handle cookie removal for requests
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          res.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
-  let user = null
-  try {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    user = authUser
-  } catch (error) {
-    console.error('Auth error in middleware:', error)
+  // Get the authenticated user
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  if (authError) {
+    console.error('Auth error in middleware:', authError)
   }
 
   // Define route categories
@@ -85,39 +109,59 @@ export async function middleware(req: NextRequest) {
   // For protected routes, verify user has company association and proper role
   if (user && isProtectedRoute) {
     try {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('company_id, role')
-        .eq('id', user.id)
-        .single()
-
-      if (!profile?.company_id) {
-        return NextResponse.redirect(new URL('/auth/setup-required', req.url))
-      }
-
-      // Check role-based permissions
-      const userRole = profile.role as UserRole
-      const matchingRoute = protectedRoutes.find(route => pathname.startsWith(route))
+      // Only fetch profile for core protected routes to prevent excessive DB queries
+      const coreProtectedPaths = ['/dashboard', '/profile', '/company', '/validation', '/reports']
+      const needsRoleCheck = coreProtectedPaths.some(path => pathname.startsWith(path))
       
-      if (matchingRoute) {
-        const allowedRoles = ROUTE_PERMISSIONS[matchingRoute]
-        if (!allowedRoles.includes(userRole)) {
-          // Redirect to access denied or dashboard with error
-          const deniedUrl = new URL('/dashboard', req.url)
-          deniedUrl.searchParams.set('error', 'insufficient_permissions')
-          deniedUrl.searchParams.set('required_role', allowedRoles.join(','))
-          return NextResponse.redirect(deniedUrl)
-        }
-      }
+      if (needsRoleCheck) {
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('company_id, role')
+          .eq('id', user.id)
+          .single()
 
-      // Add user context to request headers for API routes
-      res.headers.set('x-user-id', user.id)
-      res.headers.set('x-user-role', userRole)
-      res.headers.set('x-company-id', profile.company_id)
+        if (profileError) {
+          console.error('Error fetching user profile in middleware:', profileError)
+          // Only redirect to profile setup if we're not already there
+          if (pathname !== '/auth/profile-setup' && pathname !== '/auth/login') {
+            return NextResponse.redirect(new URL('/auth/profile-setup?error=profile_missing', req.url))
+          }
+        } else if (profile) {
+          // Check company association
+          if (!profile.company_id && pathname !== '/auth/profile-setup') {
+            return NextResponse.redirect(new URL('/auth/profile-setup?error=company_missing', req.url))
+          }
+
+          // Check role-based permissions
+          const userRole = profile.role as UserRole
+          const matchingRoute = protectedRoutes.find(route => pathname.startsWith(route))
+          
+          if (matchingRoute && profile.company_id) {
+            const allowedRoles = ROUTE_PERMISSIONS[matchingRoute]
+            if (!allowedRoles.includes(userRole)) {
+              const deniedUrl = new URL('/dashboard', req.url)
+              deniedUrl.searchParams.set('error', 'insufficient_permissions')
+              deniedUrl.searchParams.set('required_role', allowedRoles.join(','))
+              return NextResponse.redirect(deniedUrl)
+            }
+          }
+
+          // Add user context to request headers for API routes
+          res.headers.set('x-user-id', user.id)
+          res.headers.set('x-user-role', userRole)
+          res.headers.set('x-company-id', profile.company_id)
+        }
+      } else {
+        // For non-core protected routes, just add user ID
+        res.headers.set('x-user-id', user.id)
+      }
 
     } catch (error) {
       console.error('Error checking user profile:', error)
-      return NextResponse.redirect(new URL('/auth/login', req.url))
+      // Avoid infinite loops - only redirect if not already on error pages
+      if (!pathname.includes('/auth/')) {
+        return NextResponse.redirect(new URL('/auth/profile-setup?error=middleware_error', req.url))
+      }
     }
   }
 

@@ -105,10 +105,10 @@ export default async function handler(
       success: true
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Validation session API error:', error);
     return res.status(500).json({
-      detail: error.message || 'Internal server error',
+      detail: error instanceof Error ? error.message : 'Internal server error',
       error: 'validation_session_error'
     });
   }

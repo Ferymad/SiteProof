@@ -86,13 +86,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...results
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Security monitoring error:', error)
     
     return res.status(500).json({
       status: 'error',
       error: 'Security monitoring failed',
-      message: error.message,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     })
   }

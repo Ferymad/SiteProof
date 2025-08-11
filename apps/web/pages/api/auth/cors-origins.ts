@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiResponse } from 'next'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -201,8 +201,15 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         })
       }
 
-      // Build update object
-      const updateData: any = {}
+      // Build update object  
+      const updateData: Partial<{
+        is_active: boolean
+        description: string
+        allow_credentials: boolean
+        allowed_methods: string
+        allowed_headers: string
+        max_age: number
+      }> = {}
       
       if (typeof isActive === 'boolean') {
         updateData.is_active = isActive
@@ -221,11 +228,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             code: 'INVALID_METHODS'
           })
         }
-        updateData.allowed_methods = allowedMethods
+        updateData.allowed_methods = JSON.stringify(allowedMethods)
       }
       
       if (allowedHeaders && Array.isArray(allowedHeaders)) {
-        updateData.allowed_headers = allowedHeaders
+        updateData.allowed_headers = JSON.stringify(allowedHeaders)
       }
       
       if (typeof maxAge === 'number') {
@@ -233,7 +240,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
       
       if (typeof description === 'string') {
-        updateData.description = description.trim() || null
+        updateData.description = description.trim() || undefined
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -295,7 +302,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       code: 'METHOD_NOT_ALLOWED'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('CORS origins endpoint error:', error)
     return res.status(500).json({
       error: 'Internal server error',

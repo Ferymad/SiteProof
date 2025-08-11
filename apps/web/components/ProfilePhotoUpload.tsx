@@ -89,8 +89,8 @@ export default function ProfilePhotoUpload({
       }
 
       onPhotoUpdate(publicUrl)
-    } catch (error: any) {
-      setError(error.message || 'Failed to upload photo')
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to upload photo')
       console.error('Photo upload error:', error)
     } finally {
       setUploading(false)

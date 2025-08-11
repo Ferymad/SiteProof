@@ -242,7 +242,17 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Build update object
-      const updateData: any = {}
+      const updateData: Partial<{
+        is_active: boolean
+        name: string
+        description: string
+        permissions: string[]
+        scopes: string[]
+        rate_limits: Record<string, number>
+        rate_limit_requests_per_minute: number
+        rate_limit_requests_per_hour: number
+        rate_limit_requests_per_day: number
+      }> = {}
       
       if (typeof isActive === 'boolean') {
         updateData.is_active = isActive
@@ -335,7 +345,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       code: 'METHOD_NOT_ALLOWED'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API keys endpoint error:', error)
     return res.status(500).json({
       error: 'Internal server error',
