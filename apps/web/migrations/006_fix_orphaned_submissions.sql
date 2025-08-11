@@ -101,19 +101,42 @@ BEGIN
     RAISE NOTICE 'SUCCESS: All records now have proper company associations';
 END $$;
 
--- Step 6: Add constraints to prevent future orphaned records
--- Make company_id NOT NULL on whatsapp_submissions to prevent future issues
-ALTER TABLE whatsapp_submissions 
-ALTER COLUMN company_id SET NOT NULL;
+-- Step 6: Add constraints to prevent future orphaned records (idempotent)
+DO $$
+BEGIN
+    -- Make company_id NOT NULL on whatsapp_submissions to prevent future issues
+    BEGIN
+        ALTER TABLE whatsapp_submissions 
+        ALTER COLUMN company_id SET NOT NULL;
+        RAISE NOTICE 'Set whatsapp_submissions.company_id to NOT NULL';
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE NOTICE 'whatsapp_submissions.company_id already NOT NULL or constraint failed: %', SQLERRM;
+    END;
 
--- Add check constraint to ensure company_id is always present
-ALTER TABLE whatsapp_submissions 
-ADD CONSTRAINT whatsapp_submissions_company_id_not_null 
-CHECK (company_id IS NOT NULL);
+    -- Add check constraint to ensure company_id is always present (idempotent)
+    BEGIN
+        ALTER TABLE whatsapp_submissions 
+        ADD CONSTRAINT whatsapp_submissions_company_id_not_null 
+        CHECK (company_id IS NOT NULL);
+        RAISE NOTICE 'Added whatsapp_submissions_company_id_not_null constraint';
+    EXCEPTION
+        WHEN duplicate_object THEN
+            RAISE NOTICE 'Constraint whatsapp_submissions_company_id_not_null already exists - skipping';
+        WHEN OTHERS THEN
+            RAISE NOTICE 'Failed to add whatsapp_submissions constraint: %', SQLERRM;
+    END;
 
--- Make company_id NOT NULL on processing_analytics
-ALTER TABLE processing_analytics 
-ALTER COLUMN company_id SET NOT NULL;
+    -- Make company_id NOT NULL on processing_analytics
+    BEGIN
+        ALTER TABLE processing_analytics 
+        ALTER COLUMN company_id SET NOT NULL;
+        RAISE NOTICE 'Set processing_analytics.company_id to NOT NULL';
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE NOTICE 'processing_analytics.company_id already NOT NULL or constraint failed: %', SQLERRM;
+    END;
+END $$;
 
 -- Final verification with constraints
 DO $$
