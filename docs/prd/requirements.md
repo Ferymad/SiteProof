@@ -4,19 +4,18 @@
 
 **Phase 1: Core Documentation Engine**
 1. **FR1**: The system shall accept WhatsApp message copy/paste input including text, voice notes, and photo attachments with mobile-optimized interface
-2. **FR2**: The system shall transcribe voice notes using Whisper API with business-risk-based routing for validation decisions
+2. **FR2**: The system shall transcribe voice notes using Whisper API with confidence scoring >90% threshold for auto-processing
 3. **FR3**: The system shall extract basic who/what/when/where information from transcribed content
 4. **FR4**: The system shall organize daily site communications (progress reports, safety incidents, routine updates) into structured formats
 5. **FR5**: The system shall generate PDF documentation packages with timestamps, GPS coordinates (when available), and photo attachments
-6. **FR6**: The system shall provide human validation queues based on business risk factors (amount, timing, error patterns) rather than AI confidence scores
+6. **FR6**: The system shall provide human validation queues with audio playback and correction tools for transcriptions below 90% confidence threshold
 7. **FR7**: The system shall maintain searchable evidence archive organized by date and project with mobile access
 8. **FR8**: The system shall support basic user authentication and single-user project management
-9. **FR9**: The system shall implement smart business risk routing with dynamic thresholds based on financial amounts, critical error patterns, and timing context
+9. **FR9**: The system shall implement smart confidence routing with dynamic thresholds based on financial amounts and timing context
 10. **FR10**: The system shall provide input recovery capabilities to prevent data loss from browser crashes or connection failures
 
 **Phase 2: Enhanced Documentation**  
 11. **FR11**: The system shall support low-stakes variation documentation after Phase 1 validation
-21. **FR21**: The system shall implement audio quality enhancement (normalization to mono 16kHz WAV) to improve transcription accuracy for field recordings
 12. **FR12**: The system shall flag financial amounts >€1,000 for mandatory PM approval followed by expert human review
 13. **FR13**: The system shall detect and warn about potential duplicate entries with different wording
 14. **FR14**: The system shall provide data export capabilities for external claims submission
@@ -52,5 +51,5 @@
 **Trust & Recovery (Phase 2)**
 13. **NFR13**: Browser state preservation using LocalStorage for crash recovery
 14. **NFR14**: Critical amounts >€1000 shall trigger mandatory review with visual warnings
-15. **NFR15**: Business risk assessments and routing decisions shall be prominently displayed for all AI-processed content
+15. **NFR15**: Confidence scores shall be prominently displayed for all AI-processed content
 16. **NFR16**: System shall support offline queueing for poor connectivity sites (Phase 3)

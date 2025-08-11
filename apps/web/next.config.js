@@ -17,25 +17,74 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Security headers for all API routes
         source: '/api/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NODE_ENV === 'development' 
-              ? 'http://localhost:3000' 
-              : 'https://your-production-domain.com'
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
+            value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version',
+            value: 'Authorization, Content-Type, Accept, Origin, X-Requested-With, X-API-Key'
           },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400'
+          }
         ],
-      },
+      }
     ];
+  },
+
+  // API redirects for documentation
+  async redirects() {
+    return [
+      {
+        source: '/api',
+        destination: '/docs/API-AUTHENTICATION-GUIDE.md',
+        permanent: false,
+      },
+      {
+        source: '/api/docs',
+        destination: '/docs/API-AUTHENTICATION-GUIDE.md',
+        permanent: false,
+      }
+    ]
+  },
+
+  // API versioning support
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: '/api/:path*',
+      }
+    ]
   },
 };
 

@@ -2,20 +2,22 @@
 
 Based on your MVP strategy and technical stack, here's the high-level epic structure for user approval:
 
-## **Epic 1: Foundation & Core Infrastructure** ✅ UNBLOCKED
-**Goal**: Establish project setup, user authentication, and basic WhatsApp message processing with a working health-check endpoint.
+## **Epic 1: Foundation & Core Infrastructure (EXPANDED)**
+**Goal**: Establish project setup, user authentication, basic message processing, AND unified input interface with MVP PDF generation.
 
-Deploy-ready foundation with user registration, WhatsApp message input, and enhanced AI transcription pipeline that processes voice notes end-to-end with business risk routing and critical error detection.
+**Phase 1A (Stories 1.1-1.5)**: ✅ COMPLETE - Deploy-ready foundation with user registration, message input, and AI transcription pipeline achieving >90% accuracy.
 
-## **Epic 2: AI Processing & Human Validation** 🎯 READY TO START
-**Goal**: Implement enhanced human validation queue workflows with business risk-based routing.
+**Phase 1B (Stories 1.6-1.8)**: 🚀 IN DEVELOPMENT - Unified input interface for text/audio, MVP PDF generation, and <3 minute end-to-end workflow. ✅ Wireframe validation completed.
 
-Complete AI processing pipeline that can transcribe construction voice notes, assess business risk, and route high-risk items through human validation workflows based on actual business impact rather than fake confidence scores.
+## **Epic 2: AI Processing & Human Validation**
+**Goal**: Implement Whisper transcription with confidence scoring and human validation queue workflows.
 
-## **Epic 3: Evidence Package Generation**
-**Goal**: Generate structured PDF documentation packages from processed WhatsApp communications with timestamps and attachments.
+Complete AI processing pipeline that can transcribe construction voice notes, score confidence levels, and route low-confidence items through human validation workflows.
 
-Evidence packages that PMs can download and submit for payment claims, including organized photos, transcribed text, and professional PDF formatting.
+## **Epic 3: Enterprise Evidence Package Generation**  
+**Goal**: Generate ADVANCED PDF documentation packages with multiple templates, compliance features, and API access for enterprise integrations.
+
+**Note**: Basic PDF generation moved to Epic 1B (Story 1.7) based on user feedback. This epic now focuses on enterprise features including digital signatures, template customization, API access, and compliance reporting.
 
 ## **Epic 4: Project Management & Archive**
 **Goal**: Enable project-based organization, searchable archive, and data export capabilities for ongoing documentation workflows.

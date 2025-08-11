@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { authService } from '@/lib/supabase'
 
 interface AuthFormProps {
   onSuccess: () => void
+  onPasswordReset?: () => void
 }
 
-export default function AuthForm({ onSuccess }: AuthFormProps) {
+export default function AuthForm({ onSuccess, onPasswordReset }: AuthFormProps) {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,17 +22,18 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+        const { data, error } = await authService.signIn(email, password)
         if (error) throw error
+        
+        // Verify user has company association
+        const { user, profile, company } = await authService.getCurrentUser()
+        if (!profile || !company) {
+          throw new Error('User account is not associated with a company. Please contact support.')
+        }
+        
         onSuccess()
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+        const { data, error } = await authService.signUp(email, password)
         if (error) throw error
         
         // Show success message for registration
@@ -102,8 +104,19 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               className="input-field"
               placeholder="Enter password"
-              minLength={6}
+              minLength={8}
             />
+            {isLogin && onPasswordReset && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={onPasswordReset}
+                  className="text-sm text-construction-600 hover:text-construction-700"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
           </div>
 
           <button
@@ -114,7 +127,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
             {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <button
               type="button"
               onClick={() => {
@@ -126,6 +139,20 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
+            
+            {isLogin && (
+              <div className="pt-2 border-t">
+                <p className="text-sm text-gray-600 mb-2">
+                  New company?
+                </p>
+                <a
+                  href="/register/company"
+                  className="inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 font-medium"
+                >
+                  Create Company Account
+                </a>
+              </div>
+            )}
           </div>
         </form>
       </div>

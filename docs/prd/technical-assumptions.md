@@ -1,19 +1,19 @@
 # Technical Assumptions
 
 ## Repository Structure: Monorepo
-**Rationale**: Coordinated development across Next.js frontend, Django API, and AI processing components while maintaining single deployment pipeline for MVP speed.
+**Rationale**: Single Next.js application containing frontend, API routes, and AI processing logic. This simplifies development and deployment for MVP while maintaining clean separation of concerns through proper folder structure.
 
 ## Service Architecture: API-First Monolith
 **Decision**: Start with Django REST Framework monolith with clear API boundaries for easy future microservices extraction. API-first design enables seamless integrations with Procore, PlanGrid, and main contractor systems from Day 1.
 
 **Core Architecture Components:**
 - **Frontend**: Next.js 14 with App Router for mobile-first responsive design
-- **API Layer**: Django + Django REST Framework for robust API development
+- **API Layer**: Next.js API Routes (MVP) → Django + DRF (Scale phase if needed)
 - **Database**: Supabase (PostgreSQL + Vector + Auth + Storage + Real-time)
-- **AI Processing**: OpenAI primary + Replicate backup for cost optimization
+- **AI Processing**: OpenAI Whisper + GPT-4 for transcription and validation
 - **File Storage**: Supabase Storage for voice notes, photos, and PDF packages
 - **Real-time**: Supabase Realtime for validation queue updates
-- **Deployment**: Vercel (frontend) + Railway (Django backend)
+- **Deployment**: Vercel (unified deployment for frontend + API)
 
 ## Testing Requirements: Unit + Integration + AI Validation
 **Critical Testing Strategy**:
@@ -44,13 +44,11 @@
 - **Real-time**: Validation queue updates and progress tracking
 - **Storage**: Integrated file handling for voice notes and images
 
-**AI Services: OpenAI + Enhanced Processing Pipeline**
-- **OpenAI Whisper**: Proven accuracy for voice transcription with audio normalization enhancement
-- **Audio Processing**: Web Audio API normalization (mono 16kHz WAV) for improved field recording quality
-- **OpenAI GPT-4**: Construction-specific prompt engineering for data extraction with hallucination guards
-- **Business Risk Assessment**: Replaces unreliable AI confidence with real business risk routing
-- **Critical Error Detection**: Pattern-based detection for currency, timing, and amount errors
+**AI Services: OpenAI + Replicate Backup**
+- **OpenAI Whisper**: Proven accuracy for voice transcription
+- **OpenAI GPT-4**: Construction-specific prompt engineering for data extraction
 - **Replicate**: Cost-effective backup for high-volume processing
+- **Confidence Scoring**: Built-in reliability metrics for human validation triggers
 
 **Deployment: Railway + Vercel**
 - **Railway**: Simple Django deployment with PostgreSQL, auto-scaling, EU regions
@@ -94,4 +92,4 @@
 - **Environment Management**: Separate dev/staging/production with consistent configs
 - **CI/CD**: GitHub Actions with automated testing and deployment
 - **Monitoring**: Supabase built-in monitoring + Sentry for error tracking
-- **Cost Control**: €45/month MVP scaling to €170/month at 1000 users
+- **Cost Control**: €35/month MVP (Next.js + Supabase) scaling to €150/month at 100 users

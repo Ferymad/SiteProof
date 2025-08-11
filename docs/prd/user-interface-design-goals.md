@@ -1,6 +1,4 @@
-# User Interface Design Goals - Enhanced with Business Risk UI
-
-**Update**: UI now displays business risk assessments instead of unreliable confidence scores
+# User Interface Design Goals
 
 ## Overall UX Vision
 **"WhatsApp-Simple, Bank-Secure"**: The interface should feel as natural as sending a WhatsApp message but inspire the confidence level of online banking. Construction PMs are comfortable with WhatsApp but need professional-grade reliability for business documentation.
@@ -55,3 +53,23 @@ Construction sites require robust accessibility due to outdoor conditions, safet
 - **Outdoor Visibility**: Field test color contrast requirements exceeding WCAG AA (4.5:1) potentially to WCAG AAA (7:1) for direct sunlight readability
 - **Glove-Friendly Interface**: Test touch target sizing beyond 44px mobile standard to 60-80px for thick work gloves
 - **Offline Functionality Priorities**: Define essential offline capabilities for poor connectivity construction sites (message capture, voice recording, photo storage)
+
+## Epic 1B Wireframe Validation Framework ✅ COMPLETED
+
+**Validation Status**: Comprehensive wireframe validation plan completed for Stories 1.6-1.8 implementation readiness.
+
+**Validation Session Framework:**
+1. **Session 1: Unified Input Interface (Story 1.6)** - Validate single-page toggle between WhatsApp text and audio upload
+2. **Session 2: MVP PDF Generation (Story 1.7)** - Validate transcription → preview → PDF download workflow  
+3. **Session 3: End-to-End Integration (Story 1.8)** - Validate complete <3 minute workflow timing
+
+**Construction-Specific Test Scenarios:**
+- **Routine Progress Report** (Low Risk) - 2-minute voice note, <90% confidence auto-processing
+- **Safety Incident Report** (Medium Risk) - WhatsApp conversation + photos, safety terminology validation
+- **High-Value Variation Claim** (High Risk) - €15,000+ documentation, mandatory human validation
+
+**Validation Success Metrics:**
+- **Quantitative**: <3 min workflow, 90% user success rate, 95% glove compatibility, outdoor visibility
+- **Qualitative**: "WhatsApp-Simple, Bank-Secure" trust validation, professional PDF credibility
+
+**Ready for Implementation**: UX wireframes validated against PRD requirements, construction PM testing protocols established, Epic 1B validation criteria confirmed.

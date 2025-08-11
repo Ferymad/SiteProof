@@ -11,7 +11,7 @@
 | Backend Language | Python | 3.11+ | Backend development | AI/ML ecosystem, construction data processing |
 | Backend Framework | Django | 5.0+ | Web framework with admin | Fastest API development, built-in validation UI |
 | API Style | REST | OpenAPI 3.0 | API communication | Industry standard, main contractor integration ready |
-| **AI Services** | **OpenAI** | **Latest** | **Voice transcription + extraction** | **Whisper for transcription, GPT-4 for data extraction** |
+| **AI Services** | **OpenAI** | **Latest** | **Voice transcription + extraction** | **Whisper for transcription, GPT-5 for data extraction** |
 | **Audio Processing** | **Web Audio API** | **Latest** | **Audio normalization** | **Mono 16kHz conversion for improved transcription accuracy** |
 | **Business Logic** | **Pattern Matching** | **Custom** | **Critical error detection** | **Currency, time, amount validation for Irish construction** |
 | Database | PostgreSQL + pgvector | 15+ | Primary database with vector search | Vector similarity for BoQ matching, ACID compliance |

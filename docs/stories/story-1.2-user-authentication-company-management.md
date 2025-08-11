@@ -488,3 +488,163 @@ During Supabase deployment, the dev agent successfully resolved three PostgreSQL
 3. **PL/pgSQL Syntax**: Fixed GET DIAGNOSTICS arithmetic with proper variable handling
 
 **Result**: All tables, functions, and RLS policies deployed successfully. System is production-operational.
+
+## Security Testing Guide
+
+### Multi-Tenant Security Validation Procedures
+**Task 5 Security Implementation Testing**
+
+This comprehensive testing guide validates the multi-tenant security implementation.
+
+#### Prerequisites
+
+**Environment Setup**:
+- Supabase project configured with proper environment variables
+- Database migrations applied (especially `004_complete_multi_tenant_security.sql`)
+- Two test companies created with different users
+
+**Test User Setup**:
+```sql
+-- Create test companies
+INSERT INTO companies (name, type) VALUES 
+('Test Company A', 'subcontractor'),
+('Test Company B', 'main_contractor');
+
+-- Create test users (use Supabase Auth UI or API)
+-- Company A: admin-a@test.com, user-a@test.com
+-- Company B: admin-b@test.com, user-b@test.com
+```
+
+#### Test Categories
+
+**1. Row Level Security (RLS) Validation**
+
+*1.1 Company Data Isolation*
+Test: Users can only access their own company data
+```sql
+-- Login as Company A user, run:
+SELECT * FROM companies;
+-- Should only return Company A
+
+SELECT * FROM users;
+-- Should only return users from Company A
+```
+Expected Result: ✅ Only company-specific data visible
+
+*1.2 WhatsApp Submissions Isolation*
+Test: Users can only see submissions from their company
+1. Create submissions for both companies
+2. Login as Company A user
+3. Query submissions: `SELECT * FROM whatsapp_submissions`
+Expected Result: ✅ Only Company A submissions visible
+
+*1.3 Processing Analytics Isolation*
+Test: Analytics data is company-isolated
+```sql
+-- As Company A user:
+SELECT * FROM processing_analytics;
+-- Should only show Company A analytics
+```
+Expected Result: ✅ Only company-specific analytics visible
+
+**2. API Security Middleware Testing**
+
+*2.1 Authentication Required*
+Test: All protected endpoints require valid authentication
+```bash
+# Test without authentication
+curl -X GET /api/company/users
+# Expected: 401 Unauthorized
+
+# Test with invalid token  
+curl -X GET /api/company/users -H "Authorization: Bearer invalid-token"
+# Expected: 401 Unauthorized
+```
+Expected Result: ✅ Proper 401 responses for unauthenticated requests
+
+*2.2 Company Context Injection*
+Test: API middleware properly injects company context
+1. Login as Company A admin
+2. Call `/api/company/users`
+3. Verify only Company A users are returned
+Expected Result: ✅ API responses filtered by company context
+
+*2.3 Cross-Company Access Prevention*
+Test: Users cannot access other companies' data via API
+1. Login as Company A user
+2. Try to update a Company B user's role
+3. Should fail with permission error
+Expected Result: ✅ Cross-company operations blocked
+
+**3. Security Breach Detection**
+
+*3.1 Cross-Company Access Detection*
+Test: System detects attempts to access other companies' data
+1. Simulate cross-company access
+2. Run security analysis: `POST /api/security/monitor`
+3. Check for CROSS_COMPANY_ACCESS alerts
+Expected Result: ✅ Security alerts generated for violations
+
+*3.2 Brute Force Detection*
+Test: System detects authentication attack patterns
+1. Generate >20 failed login attempts from same IP
+2. Run security analysis
+3. Check for BRUTE_FORCE_ATTACK alerts
+Expected Result: ✅ Brute force attacks detected
+
+**4. Permission System Validation**
+
+*4.1 Role-Based Access Control*
+Test: Each role has appropriate permissions
+
+| Role | Can Manage Users | Can View Reports | Can Access Validation |
+|------|------------------|------------------|----------------------|
+| admin | ✅ | ✅ | ✅ |
+| pm | ❌ | ✅ | ❌ |
+| validator | ❌ | ❌ | ✅ |
+| viewer | ❌ | ❌ | ❌ |
+
+Expected Result: ✅ Role permissions enforced correctly
+
+**Security Penetration Testing**
+
+*SQL Injection Resistance*
+Test: API endpoints resistant to SQL injection
+```bash
+curl -X POST /api/company/users \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "1; DROP TABLE users; --", "new_role": "admin"}'
+```
+Expected Result: ✅ No SQL injection vulnerability
+
+*JWT Token Validation*
+Test: System validates JWT tokens properly
+1. Modify JWT token payload (change company_id)
+2. Use modified token for API requests
+3. Verify requests are rejected
+Expected Result: ✅ JWT manipulation detected and blocked
+
+#### Test Results Checklist
+
+- [ ] All RLS policies working correctly
+- [ ] API security middleware functioning  
+- [ ] Storage bucket isolation enforced
+- [ ] Audit logging comprehensive and isolated
+- [ ] Security breach detection operational
+- [ ] Security alerts management working
+- [ ] Permission system properly enforced
+- [ ] No security vulnerabilities found
+- [ ] Performance impact acceptable
+- [ ] Compliance requirements met
+
+#### Production Deployment Checklist
+
+- [ ] All migrations applied
+- [ ] Environment variables configured
+- [ ] Security monitoring scheduled
+- [ ] Alert notification system configured  
+- [ ] Backup and recovery procedures tested
+- [ ] Performance monitoring in place
+- [ ] Security team trained on alert resolution
+
+**Note**: This testing guide should be executed in a test environment before production deployment. All security tests should pass before considering the multi-tenant security implementation complete.
