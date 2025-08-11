@@ -283,7 +283,7 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(({
       </div>
 
       {/* Mobile responsive adjustments */}
-      <style jsx>{`
+      <style>{`
         @media (max-width: 640px) {
           .main-controls {
             grid-template-columns: 1fr 2fr 1fr;

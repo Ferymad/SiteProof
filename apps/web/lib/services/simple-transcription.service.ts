@@ -70,7 +70,7 @@ export class SimpleTranscriptionService {
       
       // Prepare file for OpenAI API
       const file = audioBuffer instanceof Buffer 
-        ? new File([audioBuffer], filename)
+        ? new File([new Uint8Array(audioBuffer)], filename)
         : audioBuffer as File;
 
       // Call Whisper API
@@ -85,12 +85,14 @@ export class SimpleTranscriptionService {
 
       // Process response based on format
       if (options.response_format === 'verbose_json' && 'segments' in transcription) {
+        // Cast to any to access verbose_json properties
+        const verboseResponse = transcription as any;
         const result: TranscriptionResult = {
-          text: transcription.text,
-          confidence: this.calculateOverallConfidence(transcription.segments || []),
-          duration: transcription.duration,
-          language: transcription.language,
-          segments: transcription.segments?.map(segment => ({
+          text: verboseResponse.text,
+          confidence: this.calculateOverallConfidence(verboseResponse.segments || []),
+          duration: verboseResponse.duration,
+          language: verboseResponse.language,
+          segments: verboseResponse.segments?.map((segment: any) => ({
             text: segment.text,
             start: segment.start,
             end: segment.end,

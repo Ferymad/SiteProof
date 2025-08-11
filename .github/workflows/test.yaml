@@ -1,0 +1,115 @@
+name: Test Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: package-lock.json
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install frontend dependencies
+      run: npm ci --workspace=apps/web
+      
+    - name: Lint frontend
+      run: npm run lint --workspace=apps/web
+      
+    - name: Type check frontend
+      run: npx tsc --noEmit --workspace=apps/web
+      
+    - name: Test frontend
+      run: npm run test --workspace=apps/web
+      env:
+        CI: true
+        
+    - name: Build frontend
+      run: npm run build --workspace=apps/web
+      env:
+        NODE_ENV: production
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_bmad_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd apps/api
+        pip install -r requirements.txt
+        pip install dj-database-url
+        
+    - name: Run Django tests
+      run: |
+        cd apps/api
+        python manage.py test
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_bmad_db
+        DJANGO_SECRET_KEY: test-secret-key
+        DEBUG: false
+
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Check formatting
+      run: |
+        if command -v prettier &> /dev/null; then
+          npx prettier --check "**/*.{js,jsx,ts,tsx,json,md}"
+        fi
+        
+    - name: Lint monorepo
+      run: npm run lint

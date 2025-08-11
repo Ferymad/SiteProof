@@ -1,0 +1,48 @@
+# Django Backend for BMAD Construction Evidence Machine
+# Story 1.1 Task 6: API Documentation Setup
+
+# Core Django
+Django==5.0.8
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+
+# API Documentation
+drf-spectacular==0.27.2
+drf-spectacular[sidecar]==0.27.2
+
+# Database - Modern PostgreSQL adapter (no pg_config required)
+psycopg[binary]==3.2.9
+dj-database-url==2.1.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Authentication & Security
+djangorestframework-simplejwt==5.3.0
+django-ratelimit==4.1.0
+
+# Supabase integration
+supabase==2.4.2
+
+# AI/ML
+openai==1.35.8
+
+# File handling
+Pillow==10.4.0
+
+# Production server
+gunicorn==21.2.0
+
+# Development tools
+django-extensions==3.2.3
+
+# Testing
+pytest==8.2.2
+pytest-django==4.8.0
+factory-boy==3.3.0
+
+# Monitoring
+sentry-sdk[django]==2.8.0
+
+# Documentation
+Markdown==3.6

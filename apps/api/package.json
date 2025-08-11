@@ -1,0 +1,17 @@
+{
+  "name": "@bmad/api",
+  "version": "0.1.0",
+  "description": "Django REST API for BMAD Construction Evidence Machine",
+  "scripts": {
+    "dev": "python manage.py runserver",
+    "start": "gunicorn bmad_api.wsgi:application",
+    "migrate": "python manage.py migrate",
+    "collectstatic": "python manage.py collectstatic --noinput",
+    "test": "python manage.py test",
+    "shell": "python manage.py shell",
+    "createsuperuser": "python manage.py createsuperuser"
+  },
+  "engines": {
+    "python": ">=3.11"
+  }
+}

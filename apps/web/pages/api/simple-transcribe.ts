@@ -7,7 +7,9 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { simpleTranscriptionService } from '@/lib/services/simple-transcription.service';
+import { SimpleTranscriptionService } from '@/lib/services/simple-transcription.service';
+
+const simpleTranscriptionService = new SimpleTranscriptionService();
 import { supabase } from '@/lib/supabase';
 import formidable from 'formidable';
 import fs from 'fs/promises';
@@ -59,7 +61,7 @@ export default async function handler(
 
     // Process with transcription service
     console.log('🎤 Processing audio...');
-    const result = await simpleTranscriptionService.processAudio(
+    const result = await simpleTranscriptionService.transcribeAudio(
       audioBuffer,
       filename
     );
@@ -70,8 +72,8 @@ export default async function handler(
       .from('whatsapp_submissions')
       .insert({
         user_id: userId,
-        raw_transcription: result.original,
-        transcription: result.original, // Will be updated after validation
+        raw_transcription: result.text,
+        transcription: result.text, // Will be updated after validation
         processing_status: 'pending_validation',
         context_type: 'GENERAL',
         processing_stage: 'transcribed',
@@ -92,9 +94,9 @@ export default async function handler(
     return res.status(200).json({
       success: true,
       submissionId: submission.id,
-      transcription: result.original,
-      suggestions: result.suggestions,
-      metadata: result.metadata,
+      transcription: result.text,
+      suggestions: [], // No suggestions in simple transcription service
+      metadata: { confidence: result.confidence, duration: result.duration },
     });
 
   } catch (error: any) {

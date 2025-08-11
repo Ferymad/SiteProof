@@ -69,13 +69,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Convert smart suggestions to TranscriptionCard format
         corrections = analysis.suggestions.map((suggestion, index) => ({
-          confidence: suggestion.confidence >= 80 ? 'high' : 
-                     suggestion.confidence >= 60 ? 'medium' : 'low',
+          confidence: Number(suggestion.confidence) >= 80 ? 'high' : 
+                     Number(suggestion.confidence) >= 60 ? 'medium' : 'low',
           original: suggestion.original,
           suggested: suggestion.suggested,
-          timestamp: suggestion.timestamp || '00:00',
-          audioPosition: suggestion.position || 0,
-          category: suggestion.category as 'TIME' | 'SAFETY' | 'MATERIAL' | 'LOCATION',
+          timestamp: '00:00', // SmartSuggestion doesn't have timestamp
+          audioPosition: 0, // SmartSuggestion doesn't have position
+          category: (suggestion.type?.toUpperCase() || 'MATERIAL') as 'TIME' | 'SAFETY' | 'MATERIAL' | 'LOCATION',
           quickActions: ['approve', 'reject', 'edit'] as ['approve', 'reject', 'edit'],
           gloveMode: false
         }));

@@ -219,7 +219,7 @@ export default function ValidationTool({
       </div>
 
       {/* Mobile-first responsive adjustments */}
-      <style jsx>{`
+      <style>{`
         @media (max-width: 1024px) {
           .validation-interface {
             grid-template-columns: 1fr;

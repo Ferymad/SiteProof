@@ -232,7 +232,7 @@ export default function TranscriptionCard({
       )}
 
       {/* Mobile responsive adjustments */}
-      <style jsx>{`
+      <style>{`
         @media (max-width: 640px) {
           .comparison-section {
             margin-bottom: 1rem;

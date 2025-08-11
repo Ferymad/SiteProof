@@ -40,7 +40,7 @@ export default async function handler(
       }
 
       // Generate suggestions if not already present
-      let suggestions = [];
+      let suggestions: any[] = [];
       if (submission.raw_transcription) {
         const suggestionResult = await smartSuggestionService.generateSuggestions({
           text: submission.raw_transcription,
