@@ -1,7 +1,3 @@
-# /create-next-story Task
-
-When this command is used, execute the following task:
-
 # Create Next Story Task
 
 ## Purpose
@@ -81,6 +77,15 @@ ALWAYS cite source documents: `[Source: architecture/{filename}.md#{section}]`
 
 - Create new story file: `{devStoryLocation}/{epicNum}.{storyNum}.story.md` using Story Template
 - Fill in basic story information: Title, Status (Draft), Story statement, Acceptance Criteria from Epic
+
+### 5.5 Smart Story Enhancement (Optional)
+- ANALYZE story requirements using Story Enhancement Engine (`.bmad-core/utils/story-enhancement-engine.js`)
+- **REF-MCP PATTERN IDENTIFICATION**: IF external services detected, identify which current API patterns Dev Agent should fetch to prevent deprecated packages
+- IF external integrations detected: ADD phased implementation guidance to Dev Notes with REF-MCP query instructions for Dev Agent
+- IF authentication/complex UI detected: ADD completion validation reminders and API currency warnings with specific pattern queries
+- **ROLE SEPARATION**: SM identifies patterns and provides instructions, Dev Agent fetches code during implementation
+- Enhancement adds value without breaking existing workflow, prevents deprecated package issues, and respects agent role boundaries
+
 - **`Dev Notes` section (CRITICAL):**
   - CRITICAL: This section MUST contain ONLY information extracted from architecture documents. NEVER invent or assume technical details.
   - Include ALL relevant technical details from Steps 2-3, organized by category:

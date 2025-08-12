@@ -70,7 +70,7 @@
 ## Dev Notes
 
 ### Architecture Reference
-**Source**: `docs/architecture.md` - Data models and frontend architecture
+**Source**: `docs/architecture.md#database-schema` - Project and message table definitions, `docs/architecture.md#frontend-components` - React component patterns
 
 ### Database Schema (From Architecture)
 ```sql
@@ -247,17 +247,48 @@ DELETE /files/{id}/                  # Delete file
 - **Touch Gestures**: Swipe for navigation, long-press for context menus
 - **Performance**: Lazy loading, image optimization, minimal bundle size
 
-### Testing Requirements
-- **Unit Tests**: Project CRUD, message parsing, file validation
-- **Integration Tests**: File upload, WhatsApp parsing, API endpoints
-- **Mobile Tests**: Touch interactions, responsive design, connection handling
-- **E2E Tests**: Complete project creation and message input workflow
+### Testing Execution Strategy
+**Phase 1 - Unit Tests**: Project CRUD operations, WhatsApp message parsing logic, file validation functions
+**Phase 2 - Integration Tests**: Supabase database connections, file upload to storage, API endpoint responses
+**Phase 3 - Mobile Tests**: Touch interactions on 375px+ screens, responsive breakpoints, offline connectivity handling
+**Phase 4 - E2E Tests**: Complete workflow from project creation through message storage
+
+**Success Criteria Validation Order**:
+1. Project creation form functional with all required fields
+2. WhatsApp input accepts and parses messages correctly
+3. File uploads work with proper size/type validation
+4. Mobile UI responsive and touch-friendly on smartphones
+5. All data properly stored with correct project relationships
+6. Integration webhooks ready for WhatsApp Business API
 
 ### Security Considerations
 - **File Upload Security**: Type validation, size limits, virus scanning
 - **Data Isolation**: Ensure projects only accessible to company members
 - **Input Validation**: Sanitize WhatsApp message content and metadata
 - **Storage Security**: Secure file access with proper permissions
+
+### Smart Enhancement Guidance
+**Integration Complexity**: HIGH
+**Integration Types**: authentication, database, fileStorage
+
+#### Integration Validation Checkpoints
+- [ ] Verify Supabase client connection works with authentication
+- [ ] Test project creation with company context from Auth system
+- [ ] Validate file upload to organized storage buckets
+- [ ] Confirm WhatsApp message parsing and database storage
+- [ ] Test data flow between authentication, project creation, and message storage
+- [ ] Verify error handling works correctly for all service failures
+
+#### Phased Implementation Approach
+**Phase 1**: Set up and verify Supabase connections (auth, database, storage)
+**Phase 2**: Test basic operations (project CRUD, file upload, message parsing)
+**Phase 3**: Build complete feature with comprehensive error handling
+
+#### Authentication Integration Completeness
+- [ ] Project creation respects company-based user sessions
+- [ ] Protected routes prevent unauthorized project access
+- [ ] User context properly passed to all components
+- [ ] Session persistence works across browser refresh
 
 ### Performance Requirements
 - **File Upload**: Progress indicators, chunked upload for large files
@@ -266,9 +297,32 @@ DELETE /files/{id}/                  # Delete file
 - **Database Queries**: Indexed searches, pagination for large datasets
 
 ### Related Stories
-- **Story 1.1**: Project Setup & Development Environment (provides infrastructure)
-- **Story 1.2**: User Authentication & Company Management (provides user context)
-- **Story 1.4**: Health Check & Basic AI Processing Pipeline (consumes this data)
+- **Story 1.1**: Project Setup & Development Environment (provides: Next.js foundation, Supabase configuration, TypeScript setup)
+- **Story 1.2**: User Authentication & Company Management (provides: company-based user sessions, role-based access patterns, user context retrieval methods)
+- **Story 1.4**: Health Check & Basic AI Processing Pipeline (consumes: WhatsApp message data, project context for AI analysis)
+
+### 🎯 Critical Implementation Patterns (For Dev Agent)
+*Maximize One-Shot Success | Prevents common failure modes*
+
+**INSTRUCTIONS FOR DEV AGENT**: Before implementing external service integration, fetch current patterns using REF-MCP queries below:
+
+#### 1. SSR Client Initialization (SUPABASE)
+**Why Critical**: Infinite auth loops from deprecated auth-helpers
+**REF-MCP Query**: `Supabase SSR client initialization createClient @supabase/ssr middleware`
+**Implementation Context**: initialization
+
+#### 2. Middleware Setup (SUPABASE)
+**Why Critical**: Circular dependency errors in Next.js middleware
+**REF-MCP Query**: `Supabase middleware Next.js authentication updateSession`
+**Implementation Context**: middleware
+
+**DEV AGENT WORKFLOW**:
+1. Use mcp__ref-tools__ref_search_documentation with each query above
+2. Extract current code patterns from official documentation
+3. Implement using fetched patterns to prevent failure modes
+4. Validate implementation matches current best practices
+
+*Role Separation: SM identifies patterns needed, Dev fetches and implements*
 
 ## Change Log
 
