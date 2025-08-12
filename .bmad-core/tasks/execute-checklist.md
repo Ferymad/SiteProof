@@ -24,6 +24,20 @@ If the user asks or does not specify a specific checklist, list the checklists a
    - Each checklist will specify its required documents/artifacts at the beginning
    - Follow the checklist's specific instructions for what to gather, generally a file can be resolved in the docs folder, if not or unsure, halt and ask or confirm with the user.
 
+2.5 **Smart Story Enhancement Check (for story-draft-checklist only)**
+   - If running story-draft-checklist, first analyze the story for external service integrations
+   - Load Story Enhancement Engine (.bmad-core/utils/story-enhancement-engine.js) and analyze story content
+   - **REF-MCP PATTERN IDENTIFICATION**: For detected external services, identify which current API patterns Dev Agent should fetch to prevent deprecated package usage
+   - **CRITICAL DEPLOYMENT STEP**: If external integrations detected but enhancement guidance missing:
+     1. Use Story Enhancement Engine to select critical patterns: `selectCriticalPatterns(analysis, storyContent)`
+     2. Generate pattern instructions: `await fetchCriticalPatterns(selectedPatterns)`
+     3. **ACTUALLY DEPLOY**: Use `formatCriticalPatterns(patternData)` to generate formatted section
+     4. **MODIFY STORY**: Add the formatted Critical Implementation Patterns section to the story's Dev Notes
+     5. Save the story file with the deployed REF-MCP instructions
+   - Include deployment confirmation in Section 6 validation results - verify REF-MCP queries are now present in story document
+   - **ROLE SEPARATION**: SM identifies and deploys pattern instructions, Dev Agent fetches and implements during development
+   - **DEPLOYMENT VERIFICATION**: After deployment, re-read story to confirm REF-MCP instructions are actually present in the document
+
 3. **Checklist Processing**
 
    If in interactive mode:

@@ -1,0 +1,202 @@
+# Integration Patterns for Story Enhancement
+# 
+# This file defines patterns that trigger smart enhancements during story creation
+# Used by story-enhancement-engine.js to detect complexity and suggest improvements
+
+version: 1.0
+description: "Pattern definitions for detecting story complexity and integration needs"
+
+# External Service Integration Patterns
+external_services:
+  authentication:
+    keywords: 
+      - "auth"
+      - "login"
+      - "register" 
+      - "signup"
+      - "supabase"
+      - "auth0"
+      - "clerk"
+      - "session"
+      - "jwt"
+      - "oauth"
+    complexity: medium
+    suggestions:
+      - phased_implementation
+      - auth_completeness_check
+      - user_journey_validation
+
+  payments:
+    keywords:
+      - "stripe"
+      - "payment"
+      - "checkout"
+      - "billing"
+      - "paypal"
+      - "subscription"
+      - "invoice"
+    complexity: high
+    suggestions:
+      - phased_implementation
+      - integration_validation
+      - error_handling_focus
+
+  database:
+    keywords:
+      - "prisma"
+      - "mongodb"
+      - "postgres"
+      - "mysql"
+      - "database"
+      - "schema"
+      - "migration"
+    complexity: medium
+    suggestions:
+      - incremental_validation
+      - data_integrity_check
+
+  file_storage:
+    keywords:
+      - "upload"
+      - "storage"
+      - "s3"
+      - "cloudinary" 
+      - "file"
+      - "image"
+      - "document"
+    complexity: medium
+    suggestions:
+      - phased_implementation
+      - error_handling_focus
+
+  external_apis:
+    keywords:
+      - "api"
+      - "rest"
+      - "graphql"
+      - "fetch"
+      - "axios"
+      - "webhook"
+      - "third-party"
+    complexity: medium
+    suggestions:
+      - integration_validation
+      - error_handling_focus
+      - timeout_handling
+
+# UI Complexity Patterns
+ui_patterns:
+  multi_step_forms:
+    keywords:
+      - "multi-step"
+      - "wizard"
+      - "registration flow"
+      - "onboarding"
+      - "step-by-step"
+    complexity: medium
+    suggestions:
+      - user_journey_validation
+      - form_validation_check
+
+  dashboards:
+    keywords:
+      - "dashboard"
+      - "analytics"
+      - "charts"
+      - "data visualization"
+      - "reports"
+    complexity: medium
+    suggestions:
+      - data_loading_validation
+      - performance_check
+
+  real_time_features:
+    keywords:
+      - "real-time"
+      - "websocket"
+      - "live updates"
+      - "notifications"
+      - "chat"
+    complexity: high
+    suggestions:
+      - connection_resilience
+      - state_management_focus
+
+# Complexity Modifiers
+complexity_modifiers:
+  high_risk_combinations:
+    - ["authentication", "payments"]
+    - ["real_time_features", "external_apis"]
+    - ["multi_step_forms", "external_services"]
+
+  simplification_indicators:
+    - "simple"
+    - "basic"
+    - "minimal"
+    - "quick"
+    - "straightforward"
+
+# Enhancement Suggestions Definitions
+enhancement_suggestions:
+  phased_implementation:
+    title: "Use Phased Implementation Approach"
+    description: "Break implementation into Connect → Test → Build phases"
+    when_to_apply: "Stories with external service integrations"
+    
+  auth_completeness_check:
+    title: "Ensure Authentication Completeness"
+    description: "Verify complete authentication user journey works"
+    requirements:
+      - "Login page exists and accessible"
+      - "Registration flow works end-to-end"
+      - "Protected routes actually protect content"
+      - "Logout functionality works correctly"
+    
+  integration_validation:
+    title: "Add Integration Validation Checkpoints" 
+    description: "Validate each integration point before proceeding"
+    checkpoints:
+      - "Verify package installation and imports work"
+      - "Test basic service connection/authentication" 
+      - "Validate data flow between services"
+      - "Confirm error handling works correctly"
+    
+  user_journey_validation:
+    title: "Validate Complete User Journey"
+    description: "Test the full user workflow end-to-end"
+    focus_areas:
+      - "Navigation between pages works"
+      - "Form submissions and validations"
+      - "Success and error state handling"
+      - "Mobile/responsive behavior"
+    
+  incremental_validation:
+    title: "Use Incremental Validation"
+    description: "Validate functionality at each step instead of all at end"
+    approach: "Test each component individually, then integration, then full workflow"
+    
+  error_handling_focus:
+    title: "Emphasize Error Handling"
+    description: "Plan for service failures and edge cases"
+    considerations:
+      - "Network connectivity issues"
+      - "Service downtime scenarios"
+      - "Invalid data handling"
+      - "User-friendly error messages"
+
+# Story 1.2 Specific Lessons
+lessons_learned:
+  deprecated_packages:
+    trigger_keywords: ["@supabase/auth-helpers", "deprecated", "legacy"]
+    warning: "Check package deprecation status before implementation"
+    action: "Use REF MCP or documentation to verify package status"
+    
+  infinite_loops:
+    trigger_keywords: ["middleware", "auth context", "redirect"]
+    warning: "Watch for circular dependencies in auth systems"
+    prevention: "Test auth flow early with minimal implementation"
+    
+  missing_ui:
+    trigger_keywords: ["login", "dashboard", "page", "route"]
+    warning: "Ensure all required pages are implemented"
+    validation: "Test complete user journey before marking done"

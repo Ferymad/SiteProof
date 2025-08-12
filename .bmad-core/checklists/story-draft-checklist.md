@@ -110,6 +110,37 @@ Note: We don't need every file listed - just the important ones.]]
 - [ ] Success criteria are defined
 - [ ] Special testing considerations are noted (if applicable)
 
+## 6. STORY ENHANCEMENT ANALYSIS
+
+[[LLM: Check if this story could benefit from Smart Enhancement guidance:
+
+1. Analyze story content for external service integrations (authentication, payments, databases, APIs)
+2. If external services detected, verify story includes phased implementation guidance
+3. Check if completion validation steps are included for complex integrations
+4. Use Story Enhancement Engine (.bmad-core/utils/story-enhancement-engine.js) if available
+5. **REF-MCP PATTERN DEPLOYMENT**: For external services, identify patterns needed AND actually deploy them to the story document:
+   - Use selectCriticalPatterns() to identify patterns
+   - Use fetchCriticalPatterns() to generate instructions  
+   - Use formatCriticalPatterns() to create formatted section
+   - **CRITICAL**: Actually add the "🎯 Critical Implementation Patterns (For Dev Agent)" section to story Dev Notes
+6. **DEPLOYMENT VERIFICATION**: After deployment, verify story document contains REF-MCP queries (not just analysis)
+7. **ROLE SEPARATION**: SM deploys pattern instructions to story, Dev Agent fetches code during implementation
+8. If patterns deployed, confirm deployment in validation results
+
+This ensures stories ACTUALLY CONTAIN deployed REF-MCP instructions for Dev Agent success, preventing Story 1.2 scenarios.]]
+
+- [ ] Story analyzed for external service integration patterns
+- [ ] Complex integrations include phased implementation guidance (if applicable)
+- [ ] Completion validation steps included for external services (if applicable)
+- [ ] **REF-MCP pattern instructions DEPLOYED in story Dev Notes section** (prevents deprecated API usage)
+- [ ] **Critical Implementation Patterns section present with REF-MCP queries** (maximizes dev agent one-shot success)
+- [ ] **Pattern deployment verified**: Story document contains "🎯 Critical Implementation Patterns (For Dev Agent)" section
+- [ ] **Sweet spot maintained**: Max 3 patterns, clear queries, focused on preventing failure modes
+- [ ] **Role boundaries respected**: SM deploys pattern instructions, Dev Agent fetches and implements
+- [ ] **Deployment confirmation**: REF-MCP queries actually exist in story document (not just analysis)
+- [ ] Story Enhancement Engine recommendations applied (if applicable)
+- [ ] **API currency warnings noted** (e.g., @supabase/auth-helpers vs @supabase/ssr)
+
 ## VALIDATION RESULT
 
 [[LLM: FINAL STORY VALIDATION REPORT
@@ -145,6 +176,7 @@ Be pragmatic - perfect documentation doesn't exist, but it must be enough to pro
 | 3. Reference Effectiveness           | _TBD_  |        |
 | 4. Self-Containment Assessment       | _TBD_  |        |
 | 5. Testing Guidance                  | _TBD_  |        |
+| 6. Story Enhancement Analysis        | _TBD_  |        |
 
 **Final Assessment:**
 

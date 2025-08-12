@@ -1,0 +1,89 @@
+# Critical Implementation Patterns
+# These are the 2-3 most critical code patterns per service that maximize dev agent one-shot success
+# Patterns focus on preventing common failure modes identified in Story 1.2 and similar issues
+
+authentication:
+  supabase:
+    patterns:
+      - name: "SSR Client Initialization"
+        priority: 1
+        prevents: "Infinite auth loops from deprecated auth-helpers"
+        ref_mcp_query: "Supabase SSR client initialization createClient @supabase/ssr middleware"
+        context: "initialization"
+        
+      - name: "Middleware Setup"
+        priority: 2  
+        prevents: "Circular dependency errors in Next.js middleware"
+        ref_mcp_query: "Supabase middleware Next.js authentication updateSession"
+        context: "middleware"
+        
+      - name: "Protected Route Pattern"
+        priority: 3
+        prevents: "Authentication state inconsistencies"
+        ref_mcp_query: "Supabase protected routes server components authentication"
+        context: "route_protection"
+        
+  auth0:
+    patterns:
+      - name: "Next.js App Router Setup"
+        priority: 1
+        prevents: "Configuration errors with App Router"
+        ref_mcp_query: "Auth0 Next.js App Router setup configuration"
+        context: "initialization"
+
+payments:
+  stripe:
+    patterns:
+      - name: "Client-side Payment Intent"
+        priority: 1
+        prevents: "Payment processing failures and security issues"
+        ref_mcp_query: "Stripe payment intent client side Next.js"
+        context: "payment_processing"
+        
+      - name: "Webhook Signature Verification"
+        priority: 2
+        prevents: "Security vulnerabilities and invalid webhook processing"  
+        ref_mcp_query: "Stripe webhook signature verification Node.js"
+        context: "webhook_handling"
+
+database:
+  supabase:
+    patterns:
+      - name: "Row Level Security Setup"
+        priority: 1
+        prevents: "Data security vulnerabilities in multi-tenant apps"
+        ref_mcp_query: "Supabase Row Level Security RLS policies multi-tenant"
+        context: "security"
+        
+      - name: "Real-time Subscription Pattern"
+        priority: 2
+        prevents: "Memory leaks and connection issues"
+        ref_mcp_query: "Supabase real-time subscription cleanup unsubscribe"
+        context: "realtime"
+
+fileStorage:
+  supabase:
+    patterns:
+      - name: "Secure File Upload"
+        priority: 1
+        prevents: "Security vulnerabilities and upload failures"
+        ref_mcp_query: "Supabase storage secure file upload RLS bucket policies"
+        context: "upload"
+
+# Pattern Selection Rules
+selection_rules:
+  # Only include patterns relevant to story requirements
+  context_matching:
+    - story_mentions: ["login", "authentication", "auth"] → include auth patterns
+    - story_mentions: ["payment", "checkout", "billing"] → include payment patterns  
+    - story_mentions: ["database", "data", "crud"] → include database patterns
+    - story_mentions: ["upload", "file", "storage"] → include storage patterns
+    
+  # Maximum patterns per story to maintain sweet spot
+  limits:
+    max_patterns_per_story: 3
+    max_lines_per_pattern: 15
+    max_total_code_lines: 45
+    
+  # Priority-based selection when limits exceeded
+  selection_strategy: "highest_priority_first"
