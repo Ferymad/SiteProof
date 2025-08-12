@@ -1,0 +1,186 @@
+# Critical QA Testing Patterns Library
+# Used by Story Enhancement Engine to generate brutal QA testing requirements
+# Focuses on TOP 3 critical failure modes to prevent complexity explosion
+
+# Authentication Testing Patterns
+authentication:
+  supabase:
+    patterns:
+      - name: "Auth Flow Validation"
+        priority: 1
+        type: "RUNTIME_VALIDATION"
+        critical: true
+        prevents: "Infinite auth loops, session failures (Story 1.2 scenarios)"
+        requires_playwright: true
+        scenarios:
+          - name: "Login Success Path"
+            category: "CRITICAL_FLOW"
+            steps: "Navigate to /login → Enter valid credentials → Submit form"
+            expected: "Redirect to dashboard/home page (NO infinite loops)"
+            validates: "SSR auth implementation working correctly"
+            playwright_commands:
+              - "browser_navigate"
+              - "browser_type"
+              - "browser_click" 
+              - "browser_snapshot"
+          - name: "Session Persistence"
+            category: "STATE_MANAGEMENT"
+            steps: "Login → Close browser → Reopen → Visit protected page"
+            expected: "Still authenticated, no redirect to login"
+            validates: "Server-side session handling correct"
+          - name: "Protected Route Access"
+            category: "SECURITY_VALIDATION"
+            steps: "Without login → Try to access /dashboard or protected page"
+            expected: "Redirect to login page"
+            validates: "Route protection actually working"
+
+  auth0:
+    patterns:
+      - name: "OAuth Flow Validation"
+        priority: 1
+        type: "RUNTIME_VALIDATION" 
+        critical: true
+        prevents: "OAuth redirect failures, token issues"
+        requires_playwright: true
+        scenarios:
+          - name: "OAuth Login Flow"
+            category: "CRITICAL_FLOW"
+            steps: "Click login → Redirect to Auth0 → Enter credentials → Callback"
+            expected: "Successful login, user data available"
+            validates: "Auth0 integration working end-to-end"
+
+# Payment Processing Testing Patterns
+payments:
+  stripe:
+    patterns:
+      - name: "Payment Flow Validation"
+        priority: 2
+        type: "EXTERNAL_SERVICE_VALIDATION"
+        critical: true
+        prevents: "Payment failures, webhook issues, security vulnerabilities"
+        requires_playwright: true
+        scenarios:
+          - name: "Payment Success Path"
+            category: "CRITICAL_FLOW"
+            steps: "Select product → Add to cart → Checkout → Enter test payment → Submit"
+            expected: "Payment succeeds, order confirmation displayed"
+            validates: "Stripe integration working correctly"
+            test_data:
+              card_number: "4242424242424242"
+              exp_date: "12/34"
+              cvc: "123"
+          - name: "Payment Error Handling"
+            category: "ERROR_HANDLING"
+            steps: "Use declined test card (4000000000000002) → Attempt payment"
+            expected: "Clear error message, no app crash"
+            validates: "Error handling prevents user confusion"
+          - name: "Webhook Validation"
+            category: "BACKEND_INTEGRATION"
+            steps: "Complete payment → Check webhook received → Verify order status updated"
+            expected: "Order status changes to 'paid' in database"
+            validates: "Webhook processing working correctly"
+
+# Database/API Integration Testing
+database:
+  supabase:
+    patterns:
+      - name: "Data Persistence Validation"
+        priority: 3
+        type: "DATA_VALIDATION"
+        critical: false
+        prevents: "Data loss, sync issues, CRUD failures"
+        requires_playwright: true
+        scenarios:
+          - name: "CRUD Operations"
+            category: "DATA_INTEGRITY"
+            steps: "Create data → Read/display data → Update data → Delete data"
+            expected: "All operations work, data persists correctly"
+            validates: "Database integration and error handling"
+          - name: "Real-time Sync"
+            category: "REALTIME_FEATURES"
+            steps: "Open two browser tabs → Update data in tab 1 → Check tab 2"
+            expected: "Data updates appear in tab 2 automatically"
+            validates: "Real-time subscriptions working"
+
+  mongodb:
+    patterns:
+      - name: "Database Connection Validation"
+        priority: 3
+        type: "CONNECTION_VALIDATION"
+        critical: false
+        prevents: "Connection failures, timeout issues"
+        requires_playwright: true
+        scenarios:
+          - name: "Connection Resilience"
+            category: "ERROR_HANDLING"
+            steps: "Load data → Simulate connection issue → Retry operation"
+            expected: "App handles connection failures gracefully"
+            validates: "Database error handling and retry logic"
+
+# File Storage Testing
+storage:
+  supabase:
+    patterns:
+      - name: "File Upload Validation"
+        priority: 3
+        type: "FILE_OPERATION_VALIDATION"
+        critical: false
+        prevents: "Upload failures, file corruption, storage issues"
+        requires_playwright: true
+        scenarios:
+          - name: "File Upload Success"
+            category: "UPLOAD_FLOW"
+            steps: "Select file → Upload → Verify file appears → Download file"
+            expected: "File uploads successfully and downloads correctly"
+            validates: "Storage integration working end-to-end"
+
+# Selection Rules (Sweet Spot Maintenance)
+selection_rules:
+  limits:
+    max_patterns_per_story: 3      # Prevent pattern overload
+    max_scenarios_per_pattern: 3   # Keep focused on critical scenarios
+    max_total_scenarios: 5         # Total scenario limit across all patterns
+  
+  prioritization:
+    critical_first: true           # Always select critical patterns first
+    authentication_priority: 1    # Auth issues cause most production failures
+    payments_priority: 2          # Payment failures are business-critical
+    data_priority: 3              # Data issues are important but less urgent
+
+  context_matching:
+    # Match story content to appropriate patterns
+    keywords:
+      authentication: ["login", "register", "auth", "signin", "signup", "session"]
+      payments: ["payment", "checkout", "stripe", "billing", "purchase", "order"]
+      database: ["data", "save", "crud", "database", "store", "persist"]
+      storage: ["upload", "file", "image", "document", "storage", "download"]
+
+# QA Agent Behavior Rules
+qa_behavior:
+  testing_approach: "selective_brutal"  # Not everything, but brutal on selected areas
+  documentation_style: "reproduction_focused"  # Always include exact reproduction steps
+  failure_reporting: "actionable"      # Every bug must have clear fix instructions
+  
+  playwright_usage:
+    primary_tool: "mcp__microsoft-playwright-mcp"
+    required_commands:
+      - "browser_navigate"    # Navigate to pages
+      - "browser_snapshot"    # Capture page state for analysis
+      - "browser_type"        # Enter form data
+      - "browser_click"       # Interact with elements  
+      - "browser_take_screenshot" # Document failures
+    
+  success_criteria:
+    all_critical_scenarios_pass: true
+    reproduction_steps_documented: true
+    actionable_bug_reports_created: true
+    dev_agent_can_fix_issues: true
+
+# Integration with REF-MCP System
+ref_mcp_integration:
+  coordinates_with: "critical-patterns.yaml"
+  deployment_strategy: "atomic"  # Both REF-MCP and QA patterns deploy together
+  role_separation: "maintained"  # SM deploys, QA executes
+  story_sections:
+    dev_patterns: "Dev Notes section"
+    qa_requirements: "QA Testing Requirements section"

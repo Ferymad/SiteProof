@@ -199,7 +199,22 @@ export function extractTokenFromRequest(req: any): string | null {
     return authHeader.substring(7)
   }
   
-  // Fallback to cookie if no bearer token
-  const tokenCookie = req.cookies['sb-access-token']
-  return tokenCookie || null
+  // Fallback to Supabase auth token cookie
+  // Look for cookie pattern: sb-{project-id}-auth-token
+  const cookies = req.cookies || {}
+  for (const [name, value] of Object.entries(cookies)) {
+    if (name.startsWith('sb-') && name.endsWith('-auth-token') && value) {
+      try {
+        // Decode the base64 encoded cookie value
+        const decoded = Buffer.from(value.replace('base64-', ''), 'base64').toString()
+        const authData = JSON.parse(decoded)
+        return authData.access_token || null
+      } catch (error) {
+        console.error('Error decoding Supabase auth cookie:', error)
+        continue
+      }
+    }
+  }
+  
+  return null
 }

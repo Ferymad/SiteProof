@@ -66,10 +66,30 @@ When a developer agent marks a story as "Ready for Review", perform a comprehens
    - Check that test assertions are meaningful
    - Look for missing test scenarios
 
-9. **Documentation and Comments**
-   - Verify code is self-documenting where possible
-   - Add comments for complex logic if missing
-   - Ensure any API changes are documented
+9. **BRUTAL QA VALIDATION (External Service Stories Only)**
+   - **MANDATORY CHECK**: Look for "🧪 Critical QA Testing Requirements (For QA Agent)" section in story
+   - **IF QA requirements found**: Execute ALL critical testing scenarios using Playwright MCP
+   - **Playwright Execution Workflow**:
+     a. Use `mcp__microsoft-playwright-mcp__browser_navigate` to navigate to application
+     b. Execute each scenario step-by-step following exact reproduction steps
+     c. Use `mcp__microsoft-playwright-mcp__browser_snapshot` to capture current state
+     d. Use `mcp__microsoft-playwright-mcp__browser_take_screenshot` to document any failures
+     e. Document EVERY flaw found with exact reproduction steps
+   - **Critical Failure Mode Detection**:
+     - ✅ **Story 1.2 Prevention**: Verify no infinite auth loops (login → dashboard, not login → login)
+     - ✅ **External Service Integration**: All third-party services actually working
+     - ✅ **Error State Handling**: App handles failures gracefully without crashes
+   - **Brutal Documentation Standard**: Every bug must include:
+     - Exact steps to reproduce
+     - Expected behavior
+     - Actual behavior
+     - Screenshot evidence
+     - Clear fix instructions for Dev Agent
+
+10. **Documentation and Comments**
+    - Verify code is self-documenting where possible
+    - Add comments for complex logic if missing
+    - Ensure any API changes are documented
 
 ## Update Story File - QA Results Section ONLY
 
@@ -82,11 +102,52 @@ After review and any refactoring, append your results to the story file in the Q
 
 ### Review Date: [Date]
 
-### Reviewed By: Quinn (Senior Developer QA)
+### Reviewed By: Quinn (Brutal QA Agent)
 
 ### Code Quality Assessment
 
 [Overall assessment of implementation quality]
+
+### Brutal QA Testing Results
+
+**External Service Integration Testing**: [✓ Executed / ⚠️ Skipped - No QA requirements found]
+
+[IF QA testing was executed, document each scenario result:]
+
+#### Authentication Flow Validation
+- **Login Success Path**: [✓ PASS / ✗ FAIL]
+  - **Steps Executed**: [Actual steps performed]
+  - **Result**: [What happened]
+  - **Evidence**: [Screenshot filename if failure]
+  - **Issues Found**: [Specific bugs discovered]
+
+- **Session Persistence**: [✓ PASS / ✗ FAIL]
+  - **Steps Executed**: [Actual steps performed]
+  - **Result**: [What happened]
+  - **Issues Found**: [Specific bugs discovered]
+
+#### Payment Flow Validation (if applicable)
+- **Payment Success Path**: [✓ PASS / ✗ FAIL]
+- **Payment Error Handling**: [✓ PASS / ✗ FAIL]
+
+#### Story 1.2 Prevention Validation
+- **No Infinite Auth Loops**: [✓ CONFIRMED / ✗ FAILED - Infinite loops detected]
+- **Deprecated Package Detection**: [✓ CLEAN / ⚠️ DEPRECATED PACKAGES FOUND]
+
+### Critical Bugs Discovered
+
+[IF any critical bugs found during brutal testing:]
+
+1. **Bug**: [Short description]
+   - **Reproduction Steps**: 
+     1. [Step 1]
+     2. [Step 2] 
+     3. [Step 3]
+   - **Expected**: [What should happen]
+   - **Actual**: [What actually happened]
+   - **Evidence**: [Screenshot: screenshot-file.png]
+   - **Fix Required**: [Specific instructions for Dev Agent]
+   - **Priority**: [HIGH/MEDIUM/LOW]
 
 ### Refactoring Performed
 
@@ -103,6 +164,7 @@ After review and any refactoring, append your results to the story file in the Q
 - Project Structure: [✓/✗] [notes if any]
 - Testing Strategy: [✓/✗] [notes if any]
 - All ACs Met: [✓/✗] [notes if any]
+- **Brutal QA Requirements**: [✓ All scenarios tested / ⚠️ Partial / ✗ Failed]
 
 ### Improvements Checklist
 
@@ -124,7 +186,9 @@ After review and any refactoring, append your results to the story file in the Q
 
 ### Final Status
 
-[✓ Approved - Ready for Done] / [✗ Changes Required - See unchecked items above]
+[✓ Approved - Ready for Done] / [✗ Changes Required - See Critical Bugs and unchecked items above]
+
+**Brutal QA Summary**: [Total scenarios tested: X | Passed: Y | Failed: Z]
 ```
 
 ## Key Principles

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase, uploadVoiceNote } from '@/lib/supabase'
+import { validateWhatsAppText } from '@/lib/validation'
 import ProcessingStatus from './ProcessingStatus'
+import ProjectSelector from './ProjectSelector'
 
 interface User {
   id: string;
@@ -48,9 +50,10 @@ interface ProcessingResult {
 
 interface WhatsAppFormProps {
   user: User;
+  companyId: string;
 }
 
-export default function WhatsAppForm({ user }: WhatsAppFormProps) {
+export default function WhatsAppForm({ user, companyId }: WhatsAppFormProps) {
   const [whatsappText, setWhatsappText] = useState('')
   const [voiceFile, setVoiceFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -62,6 +65,7 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
   const [useContextAware, setUseContextAware] = useState(false)
   const [compareModeEnabled, setCompareModeEnabled] = useState(false)
   const [comparisonResults, setComparisonResults] = useState<{legacy: ProcessingResult | null, gpt5: ProcessingResult | null}>({legacy: null, gpt5: null})
+  const [selectedProject, setSelectedProject] = useState<any>(null)
 
   // Initialize context-aware setting from localStorage
   useEffect(() => {
@@ -161,8 +165,24 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!whatsappText.trim() && !voiceFile) {
+    
+    // Validate WhatsApp text if provided
+    let sanitizedText = ''
+    if (whatsappText.trim()) {
+      const textValidation = validateWhatsAppText(whatsappText)
+      if (!textValidation.isValid) {
+        setError(textValidation.error!)
+        return
+      }
+      sanitizedText = textValidation.sanitized
+    }
+    
+    if (!sanitizedText && !voiceFile) {
       setError('Please provide either WhatsApp text or a voice note')
+      return
+    }
+    if (!selectedProject) {
+      setError('Please select a project for this submission')
       return
     }
 
@@ -184,7 +204,8 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
         .insert([
           {
             user_id: user.id,
-            whatsapp_text: whatsappText.trim() || null,
+            project_id: selectedProject.id,
+            whatsapp_text: sanitizedText || null,
             voice_file_path: voiceFileUrl,
             processing_status: 'pending',
             created_at: new Date().toISOString()
@@ -392,6 +413,21 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
+              <label className="block text-lg font-medium text-gray-700 mb-3">
+                Select Project *
+              </label>
+              <ProjectSelector
+                companyId={companyId}
+                selectedProjectId={selectedProject?.id}
+                onSelect={setSelectedProject}
+                className=""
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Choose which project this WhatsApp data belongs to
+              </p>
+            </div>
+
+            <div>
               <label htmlFor="whatsapp-text" className="block text-lg font-medium text-gray-700 mb-3">
                 WhatsApp Messages
               </label>
@@ -433,7 +469,7 @@ export default function WhatsAppForm({ user }: WhatsAppFormProps) {
 
             <button
               type="submit"
-              disabled={loading || (!whatsappText.trim() && !voiceFile)}
+              disabled={loading || (!whatsappText.trim() && !voiceFile) || !selectedProject}
               className="w-full btn-primary disabled:opacity-50"
             >
               {loading ? 'Uploading...' : 'Submit Construction Data'}

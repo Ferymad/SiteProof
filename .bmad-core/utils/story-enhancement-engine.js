@@ -616,6 +616,179 @@ class StoryEnhancementEngine {
     
     return enhancement;
   }
+
+  /**
+   * Select critical QA testing patterns based on story analysis
+   * @param {object} analysis - Story analysis results  
+   * @param {string} storyContent - Original story content for context matching
+   * @returns {array} Selected critical QA patterns (max 3 per story)
+   */
+  selectCriticalQAPatterns(analysis, storyContent) {
+    if (!analysis.hasExternalIntegrations) {
+      return [];
+    }
+
+    const selectedPatterns = [];
+    const storyLower = storyContent.toLowerCase();
+    
+    // Authentication Testing Patterns
+    if (analysis.integrationTypes.includes('authentication')) {
+      selectedPatterns.push({
+        name: 'Authentication Flow Validation',
+        priority: 1,
+        type: 'RUNTIME_VALIDATION',
+        critical: true,
+        prevents: 'Infinite auth loops, session failures (Story 1.2 scenarios)',
+        playwright_required: true,
+        scenarios: [
+          {
+            name: 'Login Success Path',
+            steps: 'Navigate to /login → Enter valid credentials → Submit form',
+            expected: 'Redirect to dashboard/home page (NO infinite loops)',
+            validates: 'SSR authentication system working correctly'
+          },
+          {
+            name: 'Session Persistence',
+            steps: 'Login → Close browser → Reopen → Visit protected page',
+            expected: 'Still authenticated, no redirect to login',
+            validates: 'Server-side session handling correct'
+          },
+          {
+            name: 'Protected Route Access',
+            steps: 'Without login → Try to access /dashboard or protected page',
+            expected: 'Redirect to login page',
+            validates: 'Route protection actually working'
+          }
+        ]
+      });
+    }
+
+    // Payment Processing Testing Patterns  
+    if (analysis.integrationTypes.includes('payments')) {
+      selectedPatterns.push({
+        name: 'Payment Integration Validation',
+        priority: 2,
+        type: 'EXTERNAL_SERVICE_VALIDATION',
+        critical: true,
+        prevents: 'Payment failures, webhook issues, security vulnerabilities',
+        playwright_required: true,
+        scenarios: [
+          {
+            name: 'Payment Flow End-to-End',
+            steps: 'Select product → Add to cart → Checkout → Enter test payment info → Submit',
+            expected: 'Payment succeeds, order confirmation displayed',
+            validates: 'Stripe/payment provider integration working'
+          },
+          {
+            name: 'Payment Error Handling',
+            steps: 'Use declined test card number → Attempt payment',
+            expected: 'Clear error message, no app crash',
+            validates: 'Error handling prevents user confusion'
+          }
+        ]
+      });
+    }
+
+    // Database/API Integration Testing
+    if (analysis.integrationTypes.includes('database') || analysis.integrationTypes.includes('apis')) {
+      selectedPatterns.push({
+        name: 'Data Persistence Validation',
+        priority: 3,
+        type: 'DATA_VALIDATION',
+        critical: false,
+        prevents: 'Data loss, sync issues, API failures',
+        playwright_required: true,
+        scenarios: [
+          {
+            name: 'CRUD Operations',
+            steps: 'Create data → Read/display data → Update data → Delete data',
+            expected: 'All operations work, data persists correctly',
+            validates: 'Database integration and error handling'
+          },
+          {
+            name: 'API Error Handling',
+            steps: 'Simulate network failure (disconnect internet) → Try to save data',
+            expected: 'User sees clear error message, no data loss',
+            validates: 'Offline/error state handling'
+          }
+        ]
+      });
+    }
+
+    // Sort by priority and limit to max 3 patterns (Sweet Spot Rule)
+    return selectedPatterns
+      .sort((a, b) => (a.priority || 999) - (b.priority || 999))
+      .slice(0, 3);
+  }
+
+  /**
+   * Generate brutal QA testing requirements section for story
+   * @param {array} qaPatterns - Selected QA patterns 
+   * @returns {string} Formatted QA testing section for story deployment
+   */
+  formatQATestingRequirements(qaPatterns) {
+    if (qaPatterns.length === 0) {
+      return '';
+    }
+
+    let section = `\n### 🧪 Critical QA Testing Requirements (For QA Agent)\n`;
+    section += `*Brutal validation prevents production failures | Story 1.2 prevention*\n\n`;
+    section += `**INSTRUCTIONS FOR QA AGENT**: Execute these critical scenarios using Playwright MCP:\n\n`;
+
+    qaPatterns.forEach((pattern, index) => {
+      section += `#### ${index + 1}. ${pattern.name}\n`;
+      section += `**Why Critical**: ${pattern.prevents}\n`;
+      section += `**Requires Browser Testing**: ${pattern.playwright_required ? '✅ YES' : '❌ NO'}\n\n`;
+      
+      pattern.scenarios.forEach((scenario, scenarioIndex) => {
+        section += `**${String.fromCharCode(65 + scenarioIndex)}. ${scenario.name}**\n`;
+        section += `- **Steps**: ${scenario.steps}\n`;
+        section += `- **Expected**: ${scenario.expected}\n`;
+        section += `- **Validates**: ${scenario.validates}\n\n`;
+      });
+    });
+
+    section += `**QA AGENT WORKFLOW**:\n`;
+    section += `1. Use mcp__microsoft-playwright-mcp__browser_navigate to navigate to app\n`;
+    section += `2. Execute each scenario step-by-step with appropriate MCP commands\n`;
+    section += `3. Take screenshots of failures using browser_take_screenshot\n`;
+    section += `4. Document EVERY flaw found with exact reproduction steps\n`;
+    section += `5. Generate actionable bug list for Dev Agent to address\n\n`;
+    
+    section += `*Role Separation: SM deploys requirements, QA executes brutal testing*\n`;
+    
+    return section;
+  }
+
+  /**
+   * Generate complete enhanced story sections (REF-MCP + Brutal QA)
+   * @param {object} analysis - Story analysis results
+   * @param {object} docInsights - Documentation fetching results  
+   * @param {string} storyContent - Original story content
+   * @returns {object} Enhanced sections for story deployment
+   */
+  async generateBrutalEnhancementSections(analysis, docInsights, storyContent = '') {
+    const sections = {};
+    
+    // Generate REF-MCP enhanced Dev Notes (existing functionality)
+    sections.devNotes = await this.generateRefMcpEnhancedDevNotes(analysis, docInsights, storyContent);
+    
+    // Generate Brutal QA Testing Requirements (new functionality)
+    const qaPatterns = this.selectCriticalQAPatterns(analysis, storyContent);
+    sections.qaRequirements = this.formatQATestingRequirements(qaPatterns);
+    
+    // Generate combined deployment data
+    sections.deploymentData = {
+      timestamp: new Date().toISOString(),
+      hasRefMcpPatterns: storyContent && analysis.hasExternalIntegrations,
+      hasQAPatterns: qaPatterns.length > 0,
+      totalPatterns: qaPatterns.length,
+      requiresPlaywrightTesting: qaPatterns.some(p => p.playwright_required),
+      criticalValidations: qaPatterns.filter(p => p.critical).length
+    };
+    
+    return sections;
+  }
 }
 
 module.exports = StoryEnhancementEngine;

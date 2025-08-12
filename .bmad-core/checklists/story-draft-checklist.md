@@ -119,27 +119,36 @@ Note: We don't need every file listed - just the important ones.]]
 3. Check if completion validation steps are included for complex integrations
 4. Use Story Enhancement Engine (.bmad-core/utils/story-enhancement-engine.js) if available
 5. **REF-MCP PATTERN DEPLOYMENT**: For external services, identify patterns needed AND actually deploy them to the story document:
-   - Use selectCriticalPatterns() to identify patterns
-   - Use fetchCriticalPatterns() to generate instructions  
+   - Use selectCriticalPatterns() to identify REF-MCP patterns
+   - Use fetchCriticalPatterns() to generate REF-MCP instructions  
    - Use formatCriticalPatterns() to create formatted section
    - **CRITICAL**: Actually add the "🎯 Critical Implementation Patterns (For Dev Agent)" section to story Dev Notes
-6. **DEPLOYMENT VERIFICATION**: After deployment, verify story document contains REF-MCP queries (not just analysis)
-7. **ROLE SEPARATION**: SM deploys pattern instructions to story, Dev Agent fetches code during implementation
-8. If patterns deployed, confirm deployment in validation results
+6. **BRUTAL QA PATTERN DEPLOYMENT**: For external services, identify testing requirements AND actually deploy them to the story document:
+   - Use selectCriticalQAPatterns() to identify QA testing scenarios
+   - Use formatQATestingRequirements() to create formatted section
+   - **CRITICAL**: Actually add the "🧪 Critical QA Testing Requirements (For QA Agent)" section to story (after Dev Notes)
+7. **ATOMIC DEPLOYMENT**: Use generateBrutalEnhancementSections() to deploy BOTH REF-MCP and QA patterns together
+8. **DEPLOYMENT VERIFICATION**: After deployment, verify story document contains BOTH REF-MCP queries AND QA testing requirements (not just analysis)
+9. **ROLE SEPARATION**: SM deploys ALL pattern instructions to story, Dev Agent fetches/implements code, QA Agent executes testing
+10. If patterns deployed, confirm BOTH deployments in validation results
 
-This ensures stories ACTUALLY CONTAIN deployed REF-MCP instructions for Dev Agent success, preventing Story 1.2 scenarios.]]
+This ensures stories ACTUALLY CONTAIN deployed REF-MCP instructions AND brutal QA testing requirements for complete success, preventing Story 1.2 scenarios.]]
 
 - [ ] Story analyzed for external service integration patterns
 - [ ] Complex integrations include phased implementation guidance (if applicable)
 - [ ] Completion validation steps included for external services (if applicable)
 - [ ] **REF-MCP pattern instructions DEPLOYED in story Dev Notes section** (prevents deprecated API usage)
 - [ ] **Critical Implementation Patterns section present with REF-MCP queries** (maximizes dev agent one-shot success)
+- [ ] **QA testing requirements DEPLOYED in story QA section** (prevents runtime failures)
+- [ ] **Critical QA Testing Requirements section present with Playwright scenarios** (maximizes QA brutal testing)
 - [ ] **Pattern deployment verified**: Story document contains "🎯 Critical Implementation Patterns (For Dev Agent)" section
-- [ ] **Sweet spot maintained**: Max 3 patterns, clear queries, focused on preventing failure modes
-- [ ] **Role boundaries respected**: SM deploys pattern instructions, Dev Agent fetches and implements
-- [ ] **Deployment confirmation**: REF-MCP queries actually exist in story document (not just analysis)
+- [ ] **QA deployment verified**: Story document contains "🧪 Critical QA Testing Requirements (For QA Agent)" section
+- [ ] **Sweet spot maintained**: Max 3 REF-MCP patterns + Max 3 QA scenarios, focused on preventing failure modes
+- [ ] **Role boundaries respected**: SM deploys ALL pattern instructions, Dev Agent fetches/implements, QA Agent executes testing
+- [ ] **Atomic deployment confirmation**: BOTH REF-MCP queries AND QA testing requirements actually exist in story document
 - [ ] Story Enhancement Engine recommendations applied (if applicable)
 - [ ] **API currency warnings noted** (e.g., @supabase/auth-helpers vs @supabase/ssr)
+- [ ] **Playwright MCP integration confirmed**: QA scenarios include specific Playwright commands for brutal testing
 
 ## VALIDATION RESULT
 
