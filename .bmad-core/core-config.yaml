@@ -21,3 +21,10 @@ devLoadAlwaysFiles:
 devDebugLog: .ai/debug-log.md
 devStoryLocation: docs/stories
 slashPrefix: BMad
+qa:
+  engine: octomind  # AI-powered testing
+  octomind_test_target: "586f6fff-d148-4dda-a1b9-c3f6dd8d5968"
+  fallback_to_playwright: true
+  environments:
+    production: "https://bmad-explore.vercel.app"
+    local: "http://localhost:3000"

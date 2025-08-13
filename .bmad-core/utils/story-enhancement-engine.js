@@ -789,6 +789,161 @@ class StoryEnhancementEngine {
     
     return sections;
   }
+
+  /**
+   * Generate Octomind AI-powered test requirements
+   * Simple interface that leverages AI capabilities
+   * @param {string} storyContent - The story requirements text
+   * @returns {object} Octomind test configuration
+   */
+  generateOctomindTests(storyContent) {
+    try {
+      // Load Octomind AI engine config
+      const fs = require('fs');
+      const path = require('path');
+      const enginePath = path.join(__dirname, '../data/octomind-ai-engine.yaml');
+      
+      if (!fs.existsSync(enginePath)) {
+        return null; // Graceful fallback to existing system
+      }
+      
+      // Extract acceptance criteria from story
+      const criteria = this.extractAcceptanceCriteria(storyContent);
+      const analysis = this.analyzeStory(storyContent);
+      
+      // Detect technical stack from story content
+      const detectedStack = this.detectTechnicalStack(storyContent);
+      
+      // Generate intelligent prompt for AI
+      const aiPrompt = this.buildOctomindPrompt(storyContent, criteria, detectedStack);
+      
+      return {
+        engine: 'octomind',
+        mode: 'discovery',
+        prompt: aiPrompt,
+        prerequisites: this.determinePrerequisites(analysis),
+        test_scenarios: this.suggestTestScenarios(analysis),
+        environments: ['production', 'staging', 'local']
+      };
+    } catch (error) {
+      console.warn('Octomind test generation failed, falling back:', error.message);
+      return null; // Graceful fallback
+    }
+  }
+  
+  /**
+   * Extract acceptance criteria from story content
+   * @private
+   */
+  extractAcceptanceCriteria(storyContent) {
+    const lines = storyContent.split('\n');
+    const criteria = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || 
+          trimmed.includes('should') || trimmed.includes('must')) {
+        criteria.push(trimmed);
+      }
+    }
+    
+    return criteria.join('\n');
+  }
+  
+  /**
+   * Detect technical stack from story content
+   * @private
+   */
+  detectTechnicalStack(storyContent) {
+    const content = storyContent.toLowerCase();
+    const stack = [];
+    
+    // Framework detection
+    if (content.includes('next.js') || content.includes('nextjs')) stack.push('Next.js');
+    if (content.includes('react')) stack.push('React');
+    if (content.includes('vue')) stack.push('Vue.js');
+    
+    // Database detection
+    if (content.includes('supabase')) stack.push('Supabase');
+    if (content.includes('postgres')) stack.push('PostgreSQL');
+    if (content.includes('mongodb')) stack.push('MongoDB');
+    
+    // Auth detection
+    if (content.includes('auth0')) stack.push('Auth0');
+    if (content.includes('clerk')) stack.push('Clerk');
+    
+    return stack.length > 0 ? stack.join(', ') : 'Web Application';
+  }
+  
+  /**
+   * Build intelligent prompt for Octomind AI
+   * @private
+   */
+  buildOctomindPrompt(storyContent, criteria, stack) {
+    return `Story Context: ${storyContent}
+
+Acceptance Criteria: ${criteria}
+Technical Stack: ${stack}
+
+INTENT: Test this story comprehensively
+
+INSTRUCTIONS:
+1. Discover and validate ALL acceptance criteria
+2. Find edge cases and boundary conditions  
+3. Test error handling and failure modes
+4. Validate security vulnerabilities
+5. Check performance under load
+6. Test integration points thoroughly
+7. Ensure mobile compatibility
+8. Record evidence by checking for relevant UI elements
+
+BE BRUTAL. FIND BUGS. BE THOROUGH.
+
+EXPECTED RESULT:
+All functionality works correctly with no failures or security issues.`;
+  }
+  
+  /**
+   * Determine prerequisites for complex tests
+   * @private
+   */
+  determinePrerequisites(analysis) {
+    const prerequisites = [];
+    
+    if (analysis.integrationTypes.includes('authentication')) {
+      prerequisites.push('login_test');
+    }
+    
+    // Add cookie banner if web application
+    prerequisites.push('cookie_banner');
+    
+    return prerequisites;
+  }
+  
+  /**
+   * Suggest test scenarios based on analysis
+   * @private  
+   */
+  suggestTestScenarios(analysis) {
+    const scenarios = ['happy_path', 'error_handling'];
+    
+    if (analysis.integrationTypes.includes('authentication')) {
+      scenarios.push('security');
+    }
+    
+    if (analysis.integrationTypes.includes('payments')) {
+      scenarios.push('security', 'edge_cases');
+    }
+    
+    if (analysis.complexity === 'high') {
+      scenarios.push('performance');
+    }
+    
+    // Always add mobile for construction apps
+    scenarios.push('mobile');
+    
+    return scenarios;
+  }
 }
 
 module.exports = StoryEnhancementEngine;
@@ -810,4 +965,11 @@ if (require.main === module) {
   const enhancement = engine.generateDevNotesEnhancement(analysis);
   console.log('\nDev Notes Enhancement:');
   console.log(enhancement);
+  
+  // Test Octomind integration
+  const octomindTests = engine.generateOctomindTests(testStory);
+  if (octomindTests) {
+    console.log('\nOctomind AI Tests:');
+    console.log(JSON.stringify(octomindTests, null, 2));
+  }
 }

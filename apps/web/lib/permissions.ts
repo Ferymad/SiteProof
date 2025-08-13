@@ -203,7 +203,7 @@ export function extractTokenFromRequest(req: any): string | null {
   // Look for cookie pattern: sb-{project-id}-auth-token
   const cookies = req.cookies || {}
   for (const [name, value] of Object.entries(cookies)) {
-    if (name.startsWith('sb-') && name.endsWith('-auth-token') && value) {
+    if (name.startsWith('sb-') && name.endsWith('-auth-token') && value && typeof value === 'string') {
       try {
         // Decode the base64 encoded cookie value
         const decoded = Buffer.from(value.replace('base64-', ''), 'base64').toString()

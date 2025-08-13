@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProjectCreateForm from './ProjectCreateForm'
+import { sanitizeForDisplay } from '@/lib/validation'
 
 interface Project {
   id: string
@@ -73,7 +74,7 @@ export default function ProjectList({ companyId, onProjectSelect, selectedProjec
   const handleDeleteProject = async (project: Project, e: React.MouseEvent) => {
     e.stopPropagation()
     
-    if (!confirm(`Are you sure you want to archive "${project.name}"? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to archive "${sanitizeForDisplay(project.name)}"? This action cannot be undone.`)) {
       return
     }
 
@@ -105,9 +106,9 @@ export default function ProjectList({ companyId, onProjectSelect, selectedProjec
   }
 
   const filteredProjects = projects.filter(project =>
-    project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (project.metadata.projectCode?.toLowerCase().includes(searchTerm.toLowerCase()))
+    sanitizeForDisplay(project.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sanitizeForDisplay(project.location).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (sanitizeForDisplay(project.metadata.projectCode).toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -204,7 +205,7 @@ export default function ProjectList({ companyId, onProjectSelect, selectedProjec
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                    <h3 className="font-semibold text-gray-900">{sanitizeForDisplay(project.name)}</h3>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                       project.status === 'active' ? 'bg-green-100 text-green-800' :
                       project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
@@ -214,7 +215,7 @@ export default function ProjectList({ companyId, onProjectSelect, selectedProjec
                     </span>
                   </div>
                   
-                  <p className="text-gray-600 mb-2">📍 {project.location}</p>
+                  <p className="text-gray-600 mb-2">📍 {sanitizeForDisplay(project.location)}</p>
                   
                   <div className="flex gap-4 text-sm text-gray-500">
                     <span>Start: {new Date(project.start_date).toLocaleDateString()}</span>
@@ -226,13 +227,13 @@ export default function ProjectList({ companyId, onProjectSelect, selectedProjec
                   {(project.metadata.contractValue || project.metadata.mainContractor || project.metadata.projectCode) && (
                     <div className="mt-3 flex gap-4 text-sm text-gray-500">
                       {project.metadata.projectCode && (
-                        <span className="bg-gray-100 px-2 py-1 rounded">{project.metadata.projectCode}</span>
+                        <span className="bg-gray-100 px-2 py-1 rounded">{sanitizeForDisplay(project.metadata.projectCode)}</span>
                       )}
                       {project.metadata.contractValue && (
                         <span>€{project.metadata.contractValue.toLocaleString()}</span>
                       )}
                       {project.metadata.mainContractor && (
-                        <span>{project.metadata.mainContractor}</span>
+                        <span>{sanitizeForDisplay(project.metadata.mainContractor)}</span>
                       )}
                     </div>
                   )}

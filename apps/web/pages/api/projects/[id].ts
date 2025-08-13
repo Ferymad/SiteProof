@@ -5,6 +5,12 @@ import {
   extractTokenFromRequest,
   createAuthErrorResponse 
 } from '@/lib/permissions'
+import {
+  validateProjectName,
+  validateLocation,
+  validateDate,
+  validateMetadata
+} from '@/lib/validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -26,12 +32,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function handleGetProject(req: NextApiRequest, res: NextApiResponse, projectId: string) {
   try {
+    const token = extractTokenFromRequest(req)
     
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    if (!token) {
+      const error = createAuthErrorResponse()
+      return res.status(error.status).json(error)
     }
+
+    // Verify user authentication - any authenticated user can view projects
+    const userContext = await requirePermission(token, 'VIEW_PROJECTS')
 
     // Get project with company access check
     const { data: project, error } = await supabase
@@ -46,13 +55,7 @@ async function handleGetProject(req: NextApiRequest, res: NextApiResponse, proje
         )
       `)
       .eq('id', projectId)
-      .eq('company_id', (
-        await supabase
-          .from('users')
-          .select('company_id')
-          .eq('id', user.id)
-          .single()
-      ).data?.company_id)
+      .eq('company_id', userContext.company_id)
       .single()
 
     if (error) {
@@ -72,42 +75,68 @@ async function handleGetProject(req: NextApiRequest, res: NextApiResponse, proje
 
 async function handleUpdateProject(req: NextApiRequest, res: NextApiResponse, projectId: string) {
   try {
+    const token = extractTokenFromRequest(req)
     
-    // Verify user authentication and permissions
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    if (!token) {
+      const error = createAuthErrorResponse()
+      return res.status(error.status).json(error)
     }
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('company_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !userProfile?.company_id) {
-      return res.status(403).json({ error: 'Company access required' })
-    }
-
-    // Check permissions - only admins and PMs can update projects
-    if (!['admin', 'pm'].includes(userProfile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions to update projects' })
-    }
+    // Require project management permission - only admins and PMs can update projects
+    const userContext = await requirePermission(token, 'MANAGE_PROJECTS')
 
     const { name, location, start_date, end_date, metadata, status } = req.body
 
-    // Build update object
+    // Build update object with validation
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (name?.trim()) updateData.name = name.trim()
-    if (location?.trim()) updateData.location = location.trim()
-    if (start_date) updateData.start_date = start_date
-    if (end_date !== undefined) updateData.end_date = end_date || null
-    if (metadata) updateData.metadata = metadata
+    
+    if (name !== undefined) {
+      const nameValidation = validateProjectName(name)
+      if (!nameValidation.isValid) {
+        return res.status(400).json({ error: nameValidation.error })
+      }
+      updateData.name = nameValidation.sanitized
+    }
+    
+    if (location !== undefined) {
+      const locationValidation = validateLocation(location)
+      if (!locationValidation.isValid) {
+        return res.status(400).json({ error: locationValidation.error })
+      }
+      updateData.location = locationValidation.sanitized
+    }
+    
+    if (start_date !== undefined) {
+      const dateValidation = validateDate(start_date)
+      if (!dateValidation.isValid) {
+        return res.status(400).json({ error: dateValidation.error })
+      }
+      updateData.start_date = start_date
+    }
+    
+    if (end_date !== undefined) {
+      if (end_date) {
+        const dateValidation = validateDate(end_date)
+        if (!dateValidation.isValid) {
+          return res.status(400).json({ error: `End date: ${dateValidation.error}` })
+        }
+      }
+      updateData.end_date = end_date || null
+    }
+    
+    if (metadata !== undefined) {
+      const metadataValidation = validateMetadata(metadata)
+      if (!metadataValidation.isValid) {
+        return res.status(400).json({ error: metadataValidation.error })
+      }
+      updateData.metadata = metadataValidation.sanitized
+    }
+    
     if (status) updateData.status = status
 
     // Validate dates if provided
     if (updateData.end_date && updateData.start_date && 
-        new Date(updateData.end_date) < new Date(updateData.start_date)) {
+        new Date(updateData.end_date as string) < new Date(updateData.start_date as string)) {
       return res.status(400).json({ error: 'End date must be after start date' })
     }
 
@@ -139,25 +168,18 @@ async function handleUpdateProject(req: NextApiRequest, res: NextApiResponse, pr
 
 async function handleDeleteProject(req: NextApiRequest, res: NextApiResponse, projectId: string) {
   try {
+    const token = extractTokenFromRequest(req)
     
-    // Verify user authentication and permissions
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('company_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !userProfile?.company_id) {
-      return res.status(403).json({ error: 'Company access required' })
+    if (!token) {
+      const error = createAuthErrorResponse()
+      return res.status(error.status).json(error)
     }
 
     // Check permissions - only admins can delete projects
-    if (userProfile.role !== 'admin') {
+    // This will check if user has admin role for project deletion
+    const userContext = await requirePermission(token, 'MANAGE_PROJECTS')
+    
+    if (userContext.role !== 'admin') {
       return res.status(403).json({ error: 'Only administrators can delete projects' })
     }
 

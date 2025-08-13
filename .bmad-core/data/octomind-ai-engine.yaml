@@ -1,0 +1,101 @@
+# Octomind AI-Powered QA Engine
+# Simple configuration, powerful AI execution
+
+octomind_ai:
+  discovery_mode: intelligent  # AI figures out what to test
+  
+  # Universal prompt template for any story type
+  universal_prompt_template: |
+    Story Context: {story_content}
+    Acceptance Criteria: {acceptance_criteria}
+    Technical Stack: {detected_stack}
+    
+    INTENT: Test this story comprehensively
+    
+    INSTRUCTIONS:
+    1. First VERIFY the application is actually accessible - FAIL if showing error pages
+    2. ASSERT that key UI elements are present (not generic error messages)
+    3. Discover and validate ALL acceptance criteria with proper assertions
+    4. Find edge cases and boundary conditions
+    5. Test error handling and failure modes  
+    6. Validate security vulnerabilities
+    7. Check performance under load
+    8. Test integration points thoroughly
+    9. Ensure mobile compatibility
+    10. Record evidence by checking for relevant UI elements
+    11. Use STRONG assertions - tests should FAIL when things are broken
+    
+    BE BRUTAL. FIND BUGS. BE THOROUGH. AVOID FALSE POSITIVES.
+    
+    EXPECTED RESULT:
+    All functionality works correctly with no failures or security issues.
+    
+    CRITICAL: This test MUST fail if the application is not properly accessible.
+  
+  # Adaptive test generation based on story analysis
+  test_generation:
+    analyze_for:
+      - authentication_flows
+      - data_operations
+      - payment_processing
+      - file_handling
+      - real_time_features
+      - external_integrations
+    
+    # AI automatically determines appropriate test types
+    auto_test_types:
+      - happy_path: "Test successful user flows"
+      - error_handling: "Test failure scenarios and recovery"
+      - edge_cases: "Test boundary conditions and limits"
+      - security: "Test for vulnerabilities and exploits"
+      - performance: "Test speed and responsiveness"
+      - mobile: "Test on mobile devices and viewports"
+  
+  # Prerequisites for complex test scenarios
+  prerequisites:
+    login_test:
+      type: LOGIN
+      prompt: "Create a login test that can be used as prerequisite for other tests"
+    
+    cookie_banner:
+      type: COOKIE_BANNER
+      prompt: "Handle cookie banner acceptance for clean test runs"
+  
+  # Environment configuration for multi-environment testing
+  environments:
+    production:
+      url_pattern: "https://*.{domain}"
+      test_carefully: true
+    
+    staging:
+      url_pattern: "https://staging.{domain}"
+      test_aggressively: true
+    
+    local:
+      url_pattern: "http://localhost:*"
+      test_everything: true
+  
+  # AI learning and improvement settings
+  continuous_improvement:
+    learn_from_failures: true
+    optimize_test_order: true
+    suggest_code_improvements: true
+    track_patterns: true
+  
+  # Integration with BMAD enhancement system
+  bmad_integration:
+    atomic_deployment: true  # Deploy with REF-MCP patterns
+    role_separation: maintained  # SM deploys, QA executes
+    sweet_spot_limits:
+      max_test_scenarios: 5  # Prevent complexity explosion
+      max_discovery_time: 10  # Minutes per discovery
+    
+  # Simple but effective reporting
+  reporting:
+    format: brutal_qa  # Match existing BMAD format
+    include:
+      - reproduction_steps
+      - evidence_screenshots
+      - root_cause_analysis
+      - fix_suggestions
+      - pattern_insights

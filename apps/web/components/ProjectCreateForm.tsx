@@ -81,8 +81,8 @@ export default function ProjectCreateForm({ companyId, project, onSuccess, onCan
         throw new Error(errorData.error || 'Failed to create project')
       }
 
-      const project = await response.json()
-      onSuccess(project)
+      const updatedProject = await response.json()
+      onSuccess(updatedProject)
     } catch (error) {
       console.error('Project creation error:', error)
       setError(error instanceof Error ? error.message : 'Failed to create project')

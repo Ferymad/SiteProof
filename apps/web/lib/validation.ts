@@ -165,6 +165,29 @@ export function validateMetadata(metadata: unknown): {
 }
 
 /**
+ * Display-time sanitization for legacy data
+ * Used to sanitize data that's already in the database but may contain malicious content
+ */
+export function sanitizeForDisplay(input: string | null | undefined): string {
+  if (!input || typeof input !== 'string') {
+    return ''
+  }
+
+  return input
+    // Remove any remaining HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Remove script content
+    .replace(/javascript:/gi, '')
+    // Remove SQL injection attempts  
+    .replace(/(\bUNION\s+SELECT\b|\bDROP\s+TABLE\b|\bDELETE\s+FROM\b|\bINSERT\s+INTO\b|\bUPDATE\s+\w+\s+SET\b)/gi, '[BLOCKED]')
+    // Remove dangerous characters but keep readable text
+    .replace(/[<>'"`;\\]/g, '')
+    // Limit length for display
+    .substring(0, 1000)
+    .trim()
+}
+
+/**
  * Validate WhatsApp text content
  */
 export function validateWhatsAppText(text: string | null | undefined): {

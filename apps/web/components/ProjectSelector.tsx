@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { sanitizeForDisplay } from '@/lib/validation'
 
 interface Project {
   id: string
@@ -80,7 +81,7 @@ export default function ProjectSelector({ companyId, selectedProjectId, onSelect
         <option value="">Select a project...</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>
-            {project.metadata.projectCode ? `[${project.metadata.projectCode}] ` : ''}{project.name} - {project.location}
+            {project.metadata.projectCode ? `[${sanitizeForDisplay(project.metadata.projectCode)}] ` : ''}{sanitizeForDisplay(project.name)} - {sanitizeForDisplay(project.location)}
           </option>
         ))}
       </select>

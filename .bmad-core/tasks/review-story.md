@@ -66,24 +66,29 @@ When a developer agent marks a story as "Ready for Review", perform a comprehens
    - Check that test assertions are meaningful
    - Look for missing test scenarios
 
-9. **BRUTAL QA VALIDATION (External Service Stories Only)**
+9. **BRUTAL QA VALIDATION (AI-Powered Testing)**
    - **MANDATORY CHECK**: Look for "🧪 Critical QA Testing Requirements (For QA Agent)" section in story
-   - **IF QA requirements found**: Execute ALL critical testing scenarios using Playwright MCP
-   - **Playwright Execution Workflow**:
-     a. Use `mcp__microsoft-playwright-mcp__browser_navigate` to navigate to application
-     b. Execute each scenario step-by-step following exact reproduction steps
-     c. Use `mcp__microsoft-playwright-mcp__browser_snapshot` to capture current state
-     d. Use `mcp__microsoft-playwright-mcp__browser_take_screenshot` to document any failures
-     e. Document EVERY flaw found with exact reproduction steps
-   - **Critical Failure Mode Detection**:
-     - ✅ **Story 1.2 Prevention**: Verify no infinite auth loops (login → dashboard, not login → login)
-     - ✅ **External Service Integration**: All third-party services actually working
-     - ✅ **Error State Handling**: App handles failures gracefully without crashes
+   - **IF QA requirements found**: Execute ALL critical testing scenarios using Octomind AI
+   - **Octomind AI Execution Workflow**:
+     a. Check core-config.yaml for qa.engine setting
+     b. IF qa.engine == "octomind": Use AI-powered testing workflow
+     c. IF qa.engine == "playwright": Fall back to Playwright MCP workflow
+     d. Load story-enhancement-engine.js and generate AI test prompts
+     e. Use `mcp__octomind-mcp__discovery` with generated prompts to let AI explore and learn the application
+     f. Use `mcp__octomind-mcp__executeTests` to run comprehensive AI-generated test suite
+     g. Use `mcp__octomind-mcp__getTestReport` to analyze results and get AI insights
+   - **AI-Powered Critical Failure Mode Detection**:
+     - ✅ **Story 1.2 Prevention**: AI verifies no infinite auth loops (login → dashboard, not login → login)
+     - ✅ **External Service Integration**: AI tests all third-party services actually working
+     - ✅ **Error State Handling**: AI tests app handles failures gracefully without crashes
+     - ✅ **Edge Case Discovery**: AI finds boundary conditions and security vulnerabilities
+     - ✅ **Performance Validation**: AI tests under load and stress conditions
    - **Brutal Documentation Standard**: Every bug must include:
-     - Exact steps to reproduce
+     - Exact steps to reproduce (AI-generated)
      - Expected behavior
      - Actual behavior
-     - Screenshot evidence
+     - Screenshot evidence (AI-captured)
+     - Root cause analysis (AI-provided)
      - Clear fix instructions for Dev Agent
 
 10. **Documentation and Comments**
@@ -110,29 +115,38 @@ After review and any refactoring, append your results to the story file in the Q
 
 ### Brutal QA Testing Results
 
-**External Service Integration Testing**: [✓ Executed / ⚠️ Skipped - No QA requirements found]
+**AI-Powered Integration Testing**: [✓ Executed / ⚠️ Skipped - No QA requirements found]
+**QA Engine Used**: [Octomind AI / Playwright Fallback]
 
-[IF QA testing was executed, document each scenario result:]
+[IF AI testing was executed, document results:]
 
-#### Authentication Flow Validation
-- **Login Success Path**: [✓ PASS / ✗ FAIL]
-  - **Steps Executed**: [Actual steps performed]
-  - **Result**: [What happened]
-  - **Evidence**: [Screenshot filename if failure]
-  - **Issues Found**: [Specific bugs discovered]
+#### AI Discovery Results
+- **Application Exploration**: [✓ COMPLETED / ✗ FAILED]
+  - **Test Scenarios Generated**: [Number of AI-discovered scenarios]
+  - **Edge Cases Found**: [Number of edge cases AI discovered]
+  - **Security Issues Identified**: [Number of vulnerabilities found]
+
+#### AI Test Execution Results
+- **Authentication Flow Validation**: [✓ PASS / ✗ FAIL]
+  - **AI-Generated Steps**: [Steps AI executed]
+  - **Result**: [What AI observed]
+  - **Evidence**: [AI-captured screenshots]
+  - **AI Root Cause Analysis**: [AI-provided insights]
 
 - **Session Persistence**: [✓ PASS / ✗ FAIL]
-  - **Steps Executed**: [Actual steps performed]
+  - **AI Testing Strategy**: [How AI approached this test]
   - **Result**: [What happened]
-  - **Issues Found**: [Specific bugs discovered]
+  - **Issues Found**: [AI-discovered bugs]
 
-#### Payment Flow Validation (if applicable)
-- **Payment Success Path**: [✓ PASS / ✗ FAIL]
-- **Payment Error Handling**: [✓ PASS / ✗ FAIL]
+#### AI Performance & Edge Case Testing
+- **Load Testing**: [✓ PASS / ✗ FAIL - Performance issues found]
+- **Boundary Condition Testing**: [✓ PASS / ✗ FAIL - Edge cases failed]
+- **Error Recovery Testing**: [✓ PASS / ✗ FAIL - Recovery issues found]
 
 #### Story 1.2 Prevention Validation
-- **No Infinite Auth Loops**: [✓ CONFIRMED / ✗ FAILED - Infinite loops detected]
-- **Deprecated Package Detection**: [✓ CLEAN / ⚠️ DEPRECATED PACKAGES FOUND]
+- **No Infinite Auth Loops**: [✓ CONFIRMED by AI / ✗ FAILED - AI detected loops]
+- **Deprecated Package Detection**: [✓ CLEAN / ⚠️ AI FOUND DEPRECATED PACKAGES]
+- **Security Vulnerability Scan**: [✓ CLEAN / ⚠️ AI FOUND VULNERABILITIES]
 
 ### Critical Bugs Discovered
 
@@ -164,7 +178,7 @@ After review and any refactoring, append your results to the story file in the Q
 - Project Structure: [✓/✗] [notes if any]
 - Testing Strategy: [✓/✗] [notes if any]
 - All ACs Met: [✓/✗] [notes if any]
-- **Brutal QA Requirements**: [✓ All scenarios tested / ⚠️ Partial / ✗ Failed]
+- **AI-Powered QA Requirements**: [✓ All scenarios tested / ⚠️ Partial / ✗ Failed]
 
 ### Improvements Checklist
 
@@ -188,7 +202,7 @@ After review and any refactoring, append your results to the story file in the Q
 
 [✓ Approved - Ready for Done] / [✗ Changes Required - See Critical Bugs and unchecked items above]
 
-**Brutal QA Summary**: [Total scenarios tested: X | Passed: Y | Failed: Z]
+**AI-Powered QA Summary**: [Total scenarios tested: X | Passed: Y | Failed: Z | AI-discovered edge cases: W]
 ```
 
 ## Key Principles
